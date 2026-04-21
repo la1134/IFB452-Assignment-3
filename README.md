@@ -1,4 +1,4 @@
-# IFB452 Assignment 2
+# IFB452 Assignment 3
 
 ## Blockchain Project Specification (2026)
 

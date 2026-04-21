@@ -7,3 +7,8 @@ The smart contract is initialised with a constructor which sets the funding goal
 - A **refund function** can be called to transfer money from the smart contract back to a backer. The refund will only occur if a logic check verifies that the deadline has passed, the funding goal was not met, and the person calling it has the address of a backer with a balance above zero.
 
 ## 1.2 Milestone Contract:
+- Constructor sets the milestone goal and deadline and records address of the person who deployed it.
+- Contribution function contributes Ether, records the amount of Ether contributed links it to contributor’s address.
+- Contract balance function, returns the total amount of Ether currently held by the smart contract.
+- Withdraw function transfers the total balance IF: total balance is greater than or equal to the funding goal, address is the same as creator, and initial escrow funded
+- Refund function transfers money from the smart contract back to backer, will only occur IF deadline has passed, funding goal was not met, person calling it has the address of a backer with a balance above zero

@@ -1,0 +1,28 @@
+{
+  "name": "ifb452-assignment-3",
+  "version": "1.0.0",
+  "description": "This repository contains the specification summary for the IFB452 blockchain project assessment.",
+  "main": "hardhat.config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/la1134/IFB452-Assignment-3.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/la1134/IFB452-Assignment-3/issues"
+  },
+  "homepage": "https://github.com/la1134/IFB452-Assignment-3#readme",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "hardhat": "^2.22.0"
+  }
+}

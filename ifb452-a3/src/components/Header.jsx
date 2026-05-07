@@ -6,9 +6,9 @@ function Header() {
   return (
     <section className="p-4">
       <h1 className="py-2 text-2xl font-bold">Ethstarter</h1>
-      <p className="py-4 text-gray-600">Help realise the projects you love</p>
+      <p className="py-4 text-white-600">Help realise the projects you love</p>
       
-      <div className="w-full max-w-md mx-auto">
+      <div className="w-full max-w-md mx-auto py-2">
         <div className="relative flex items-center">
           
           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">

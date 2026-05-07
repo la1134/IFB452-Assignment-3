@@ -1,11 +1,14 @@
 import React from 'react';
+import { Outlet } from 'react-router-dom';
 import Header from './Header';
 
-const Layout =({children}) =>{
+const Layout = () => {
     return(
         <>
         <Header/>
-        <main>{children}</main>
+        <main className="pt-8">
+            <Outlet />
+        </main>
         </>
     )
 }

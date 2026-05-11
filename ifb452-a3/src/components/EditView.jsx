@@ -2,16 +2,18 @@ import { useState } from "react";
 import closeIcon from "../assets/close.svg"
 import timeIcon from "../assets/time.svg"
 
-const EditView = ({ projectData, onPublish, onClose } ) => {
+const EditView = ({ projectData, onSaveProject, onClose } ) => {
 
     const currentDate = new Date().toISOString().split('T')[0];
 
     const [formData, setFormData] = useState({
+        id: projectData?.id || null,
         title: projectData?.title || "",
         owner: projectData?.owner || "",
         goal: projectData?.goal || "",
         deadline: projectData?.deadline || "",
-        description: projectData?.description || ""
+        description: projectData?.description || "",
+        balance: projectData?.balance || 0
     });
 
     const handleChange = (e) => {
@@ -44,7 +46,7 @@ const EditView = ({ projectData, onPublish, onClose } ) => {
             goal: Number(formData.goal)
         };
 
-        onPublish(finalData);
+        onSaveProject(finalData);
     };
 
     return (
@@ -141,7 +143,7 @@ const EditView = ({ projectData, onPublish, onClose } ) => {
                         className="bg-[#028858] text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-[#039260]"
                         onClick={handlePublishClick}
                     >
-                        Publish Project
+                        {formData.id ? "Save Changes" : "Publish Project"}
                     </button>
                 </div>
             </div>

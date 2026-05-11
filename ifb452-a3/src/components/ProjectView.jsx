@@ -1,7 +1,7 @@
 import closeIcon from "../assets/close.svg"
 import timeIcon from "../assets/time.svg"
 
-const ProjectView = ({ projectData, onClose } ) => {
+const ProjectView = ({ projectData, onClose, onEdit } ) => {
 
     const barWidth = Math.min(projectData.percentageFunded, 100);
 
@@ -45,8 +45,14 @@ const ProjectView = ({ projectData, onClose } ) => {
                         <p className="text-gray-200 pt-8">{projectData.description}</p>
                     </div>
                 </div>
-                <div className="flex justify-start py-6 px-16">
+                <div className="flex justify-start py-6 px-16 gap-x-6">
                     <button className="bg-[#028858] text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-[#039260]">Back this project</button>
+                    <button 
+                        onClick={onEdit} 
+                        className="bg-gray-600 text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-gray-500 transition-colors"
+                    >
+                        Edit Project
+                    </button>
                 </div>
             </div>
         </div>

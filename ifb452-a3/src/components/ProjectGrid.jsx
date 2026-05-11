@@ -6,12 +6,13 @@ import timeIcon from "../assets/time.svg"
 import plusIcon from "../assets/plus.svg";
 import LoadingSpinner from './LoadingSpinner'
 
-const ProjectGrid = ({ connectionsData, onPublish, isLoading }) => {
+const ProjectGrid = ({ connectionsData, onSaveProject, isLoading }) => {
 
   const currentDate = new Date();
   const [projectData, setProjectData] = useState(null);
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const [showEditPopup, setShowEditPopup] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
 
   const handleViewProject = (project) => {
     setProjectData({
@@ -22,7 +23,8 @@ const ProjectGrid = ({ connectionsData, onPublish, isLoading }) => {
     setShowProfilePopup(true);
   }
 
-  const handleEditProject = () => {
+  const handleEditProject = (project = null) => {
+    setEditingProject(project);
     setShowEditPopup(true);
   }
 
@@ -33,6 +35,7 @@ const ProjectGrid = ({ connectionsData, onPublish, isLoading }) => {
 
   const handleCloseEdit = () => {
     setShowEditPopup(false);
+    setEditingProject(null);
   }
 
   return (
@@ -40,7 +43,7 @@ const ProjectGrid = ({ connectionsData, onPublish, isLoading }) => {
 
       <button 
         className="flex items-center gap-2 bg-[#028858] text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-[#039260] transition-colors mx-auto"
-        onClick={() => handleEditProject()}
+        onClick={() => handleEditProject(null)}
       >
         <img 
           src={plusIcon} 
@@ -104,15 +107,22 @@ const ProjectGrid = ({ connectionsData, onPublish, isLoading }) => {
         </div>
 
           {showProfilePopup && projectData && (
-            <ProjectView projectData={projectData} onClose={handleCloseProfile}/>
+            <ProjectView 
+                projectData={projectData} 
+                onClose={handleCloseProfile}
+                onEdit={() => {
+                    handleEditProject(projectData);
+                    handleCloseProfile();
+                }}
+            />
           )}
 
           {showEditPopup && (
             <EditView 
-              projectData={null} 
+              projectData={editingProject}
               onClose={handleCloseEdit} 
-              onPublish={(data) => {
-                onPublish(data);
+              onSaveProject={(data) => {
+                onSaveProject(data);
                 handleCloseEdit();
               }}
             />

@@ -34,38 +34,58 @@ function App() {
     fetchProjects();
   }, []);
 
-  const handlePublish = async (formData) => {
+  const handleSaveProject = async (formData) => {
     setIsLoading(true);
-    const newProject = {
-      ...formData,
-      id: Date.now().toString(),
-      balance: 0
-    };
+    
+    const isEditing = !!formData.id;
+    
+    let projectPayload;
+    if (isEditing) {
+      projectPayload = { ...formData };
+    } else {
+      projectPayload = {
+        ...formData,
+        id: Date.now().toLocaleString(),
+        balance: 0,
+      };
+    }
+
+    const url = isEditing 
+      ? `http://localhost:3001/projects/${projectPayload.id}` 
+      : 'http://localhost:3001/projects';
+      
+    const method = isEditing ? 'PUT' : 'POST';
 
     try {
-      const response = await fetch('http://localhost:3001/projects', {
-        method: 'POST',
+      const response = await fetch(url, {
+        method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newProject)
+        body: JSON.stringify(projectPayload)
       });
 
       if (response.ok) {
         const savedProject = await response.json();
         
+        // 3. Update local state with UI-specific formatting
         const projectForUI = {
           ...savedProject,
-          deadline: new Date(savedProject.deadline),
-          banner: BannerImg
+          banner: BannerImg, // Re-attach local asset
+          deadline: new Date(savedProject.deadline) // Convert back to Date object
         };
 
-        setProjects(prevProjects => {
-          const exists = prevProjects.find(p => p.id === projectForUI.id);
-          if (exists) return prevProjects;
-          return [projectForUI, ...prevProjects];
+        setProjects(prev => {
+          if (isEditing) {
+            // Replace the specific project in the array
+            return prev.map(p => p.id === savedProject.id ? projectForUI : p);
+          } else {
+            // Add the new project to the top
+            return [ ...prev, projectForUI];
+          }
         });
       }
     } catch (err) {
-      console.error("Publish error:", err);
+      console.error("Save error:", err);
+      alert("There was an error saving the project.");
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +94,7 @@ function App() {
   return (
     <Routes>
       <Route element={<Layout/>}>
-        <Route path="/" element={<ProjectGrid connectionsData={projects} onPublish={handlePublish} isLoading={isLoading}/>}/>
+        <Route path="/" element={<ProjectGrid connectionsData={projects} onSaveProject={handleSaveProject} isLoading={isLoading}/>}/>
       </Route>
     </Routes>
   )

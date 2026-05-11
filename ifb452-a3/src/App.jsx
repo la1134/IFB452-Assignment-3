@@ -1,47 +1,80 @@
 import { Routes, Route } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import "./App.css"
 import Layout from './components/Layout'
 import ProjectGrid from './components/ProjectGrid'
-import Banner from "./assets/manage-profile-placeholder.jpg"
-
-const testConnectionsData = [
-  {
-    id: 0,
-    banner: Banner,
-    title: "Project Title",
-    owner: "Project Owner",
-    deadline: new Date("2026-11-07"),
-    goal: 100000,
-    balance: 50000,
-    description: " Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus ac scelerisque est. Proin sed nunc gravida, ornare nulla sit amet, aliquam lorem. Aenean euismod eu dui ac viverra. Fusce placerat magna diam, eu elementum diam sodales a. Pellentesque tincidunt id magna et placerat. Integer ac odio libero. Praesent tempus auctor diam at gravida. Nunc enim metus, hendrerit id rutrum eget, mattis ut risus. Sed tincidunt, mauris in egestas aliquam, nisi ipsum ornare nunc, at tincidunt dui eros sed massa. Donec pretium massa lobortis leo porttitor, sit amet rhoncus ante fringilla. Nunc sed quam quis urna euismod faucibus. Praesent sit amet erat eget sem placerat congue. Nullam luctus urna sit amet augue rhoncus aliquam et et metus. Quisque ut volutpat justo. In varius nibh sit amet erat tempor efficitur.  Quisque aliquet facilisis enim, sit amet varius dolor hendrerit et. Sed eu gravida mi, in posuere massa. Praesent vitae felis ex. Aenean fringilla quam quis felis aliquet tempor. Donec condimentum ligula a feugiat ultricies. Suspendisse cursus, ipsum vel convallis imperdiet, arcu elit hendrerit nulla, pharetra commodo elit libero gravida velit. In efficitur rutrum libero a sagittis. Cras maximus enim et dui dignissim placerat. Sed nunc mauris, condimentum vel facilisis ac, egestas vitae magna. Donec iaculis tortor id urna blandit, lacinia lobortis tortor gravida. Nulla at finibus nibh. Nunc id velit ut lorem porta venenatis eu imperdiet nulla.  Maecenas convallis lacus vitae felis imperdiet, in porttitor turpis fermentum. Mauris fermentum ullamcorper egestas. Maecenas blandit pulvinar euismod. Ut ac diam odio. Etiam orci ante, faucibus sit amet posuere sed, pretium ut tellus. Morbi interdum leo eget libero rutrum suscipit. Etiam eget malesuada ipsum. Nulla facilisi. Nullam eu pharetra metus. Praesent nec ligula maximus, aliquam risus nec, vulputate mauris. Maecenas commodo risus id ex malesuada dignissim. Integer sit amet efficitur leo.  Maecenas ex enim, tempor et ornare ut, elementum tempor magna. Suspendisse venenatis urna eget est lacinia sagittis. Donec accumsan elit mauris, eu placerat elit consequat sit amet. Proin in magna eget magna venenatis euismod. Vestibulum at sollicitudin sapien. Sed aliquet interdum tellus, sed volutpat diam mollis quis. Suspendisse congue lectus in magna bibendum, in venenatis nunc sodales. Nam eleifend interdum lacus, ut lobortis massa dictum ac.  Maecenas vitae sapien interdum, mattis leo in, euismod dui. In bibendum magna ut neque venenatis, vitae molestie tellus consectetur. Maecenas at metus at dui semper convallis sed eu est. Cras in metus accumsan, lobortis lorem eget, porta urna. Sed pretium, tellus quis commodo iaculis, massa tellus tempus nibh, id pulvinar lorem nisi vel leo. Nullam porttitor lorem eget velit fringilla, eget feugiat urna rhoncus. Ut vitae turpis nec orci pulvinar condimentum vitae in ligula. In suscipit ex tellus, id venenatis urna tempus vitae. Aliquam eu vehicula elit. Proin et ante eget est dignissim rhoncus et lacinia enim. "
-  },
-  {
-    id: 1,
-    banner: Banner,
-    title: "Project Title",
-    owner: "Project Owner",
-    deadline: new Date("2026-11-07"),
-    goal: 100000,
-    balance: 50000,
-    description: "This is a default description."
-  },
-  {
-    id: 2,
-    banner: Banner,
-    title: "Project Title",
-    owner: "Project Owner",
-    deadline: new Date("2026-11-07"),
-    goal: 100000,
-    balance: 50000,
-    description: "This is a default description."
-  }
-]
+import projectDataRaw from './data/projects.json';
+import BannerImg from './assets/banner.jpg';
 
 function App() {
+
+  const [projects, setProjects] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch('http://localhost:3001/projects');
+        const data = await response.json();
+        
+        const formattedData = data.map(p => ({
+          ...p,
+          deadline: new Date(p.deadline),
+          banner: BannerImg
+        }));
+        setProjects(formattedData);
+      } catch (err) {
+        console.error("Server not running? Run npx json-server...", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, []);
+
+  const handlePublish = async (formData) => {
+    setIsLoading(true);
+    const newProject = {
+      ...formData,
+      id: Date.now().toString(),
+      balance: 0
+    };
+
+    try {
+      const response = await fetch('http://localhost:3001/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newProject)
+      });
+
+      if (response.ok) {
+        const savedProject = await response.json();
+        
+        const projectForUI = {
+          ...savedProject,
+          deadline: new Date(savedProject.deadline),
+          banner: BannerImg
+        };
+
+        setProjects(prevProjects => {
+          const exists = prevProjects.find(p => p.id === projectForUI.id);
+          if (exists) return prevProjects;
+          return [projectForUI, ...prevProjects];
+        });
+      }
+    } catch (err) {
+      console.error("Publish error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <Routes>
       <Route element={<Layout/>}>
-        <Route path="/" element={<ProjectGrid connectionsData={testConnectionsData}/>}/>
+        <Route path="/" element={<ProjectGrid connectionsData={projects} onPublish={handlePublish} isLoading={isLoading}/>}/>
       </Route>
     </Routes>
   )

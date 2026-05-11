@@ -37,7 +37,9 @@ const ProjectView = ({ projectData, onClose } ) => {
                                         style={{ width: `${barWidth}%` }}
                                     ></div>
                                 </div>
-                                <p className="min-w-37.5 text-xl text-gray-100">{projectData.percentageFunded.toLocaleString()}% funded</p>
+                                <p className="min-w-100 text-xl text-gray-100">
+                                    {projectData.balance.toLocaleString()}/{projectData.goal.toLocaleString()} ETH - ({projectData.percentageFunded.toLocaleString()}% funded)
+                                </p>
                             </div>
                         </div>
                         <p className="text-gray-200 pt-8">{projectData.description}</p>

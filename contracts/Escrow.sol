@@ -80,7 +80,7 @@ contract EscrowContract {
      */
     function refund() external {
         require(block.timestamp >= deadline,            "Deadline has not passed yet");
-        require(address(this).balance < fundingGoal,    "Funding goal was met, no refunds");
+        require(address(this).balance < fundingGoal,    "Funding goal was met - no refunds");
         require(contributions[msg.sender] > 0,          "No contribution to refund");
 
         uint256 amount = contributions[msg.sender];

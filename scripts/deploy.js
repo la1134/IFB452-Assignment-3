@@ -1,38 +1,66 @@
-// We require the Hardhat Runtime Environment explicitly here. This is optional
-// but useful for running the script in a standalone fashion through `node <script>`.
-//
-// You can also run a script with `npx hardhat run <script>`. If you do that, Hardhat
-// will compile your contracts, add the Hardhat Runtime Environment's members to the
-// global scope, and execute the script.
 const { ethers } = require("hardhat");
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
-  console.log("Deploying contracts with account:", deployer.address);
+  const [deployer, backer1, backer2] = await ethers.getSigners();
+  console.log("Deploying with account:", deployer.address);
 
   // ── Deploy EscrowContract ──────────────────────────────────────────
-  // Example: funding goal = 1 ETH, duration = 30 days
-  const fundingGoalWei = ethers.parseEther("1.0");
-  const durationDays = 30;
+  const fundingGoal = ethers.parseEther("1.0"); // 1 ETH
+  const durationDays = 1;                        // 1 day for testing
 
-  const EscrowContract = await ethers.getContractFactory("EscrowContract");
-  const escrow = await EscrowContract.deploy(fundingGoalWei, durationDays);
+  const Escrow = await ethers.getContractFactory("EscrowContract");
+  const escrow = await Escrow.deploy(fundingGoal, durationDays);
   await escrow.waitForDeployment();
-
   const escrowAddress = await escrow.getAddress();
-  console.log("✅ EscrowContract deployed to:", escrowAddress);
-  console.log("   Funding goal:", ethers.formatEther(fundingGoalWei), "ETH");
-  console.log("   Duration:", durationDays, "days");
+  console.log("\n✅ EscrowContract deployed to:", escrowAddress);
 
-  // ── Note about MilestoneContract ──────────────────────────────────
-  // MilestoneContract can ONLY be deployed AFTER:
-  //   1. The EscrowContract deadline has passed
-  //   2. The EscrowContract funding goal was reached
-  //   3. The creator has called escrow.withdraw()
-  //
-  // To deploy MilestoneContract later, use deploy-milestone.js
-  console.log("\n📌 Save this escrow address for the Milestone deployment:");
-  console.log("   ESCROW_ADDRESS =", escrowAddress);
+  // ── Backer contributes to Escrow ──────────────────────────────────
+  console.log("\n📤 Backer contributing 1 ETH to escrow...");
+  await escrow.connect(backer1).contribute({ value: ethers.parseEther("1.0") });
+  console.log("Balance:", ethers.formatEther(await escrow.getBalance()), "ETH");
+
+  // ── Creator withdraws from Escrow ─────────────────────────────────
+  console.log("\n💰 Creator withdrawing from escrow...");
+  await escrow.connect(deployer).withdraw();
+  console.log("Escrow withdrawn:", await escrow.withdrawn());
+
+  // ── Fast forward time (simulate deadline passing) ──────────────────
+  await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60]); // 2 days
+  await ethers.provider.send("evm_mine");
+  console.log("\n⏩ Time fast-forwarded past escrow deadline");
+
+  // ── Deploy MilestoneContract ───────────────────────────────────────
+  const Milestone = await ethers.getContractFactory("MilestoneContract");
+  const milestone = await Milestone.deploy(escrowAddress);
+  await milestone.waitForDeployment();
+  const milestoneAddress = await milestone.getAddress();
+  console.log("\n✅ MilestoneContract deployed to:", milestoneAddress);
+
+  // ── Create Round 1 ────────────────────────────────────────────────
+  console.log("\n🔵 Creating Milestone Round 1...");
+  await milestone.connect(deployer).createRound(ethers.parseEther("0.5"), 1);
+  console.log("Round 1 created");
+
+  // ── Backer contributes to Round 1 ─────────────────────────────────
+  console.log("\n📤 Backer contributing 0.5 ETH to Round 1...");
+  await milestone.connect(backer1).contribute(1, { value: ethers.parseEther("0.5") });
+  const round1Balance = await milestone.getRoundBalance(1);
+  console.log("Round 1 balance:", ethers.formatEther(round1Balance), "ETH");
+
+  // ── Creator withdraws Round 1 ──────────────────────────────────────
+  console.log("\n💰 Creator withdrawing Round 1...");
+  await milestone.connect(deployer).withdraw(1);
+  console.log("Round 1 withdrawn ✅");
+
+  // ── Create Round 2 ────────────────────────────────────────────────
+  console.log("\n🔵 Creating Milestone Round 2...");
+  await milestone.connect(deployer).createRound(ethers.parseEther("0.3"), 1);
+  console.log("Round 2 created");
+
+  console.log("\n🎉 Full deployment and test complete!");
+  console.log("─────────────────────────────────────");
+  console.log("EscrowContract:    ", escrowAddress);
+  console.log("MilestoneContract: ", milestoneAddress);
 }
 
 main().catch((error) => {

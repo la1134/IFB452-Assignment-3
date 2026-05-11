@@ -5,13 +5,15 @@ import EditView from './EditView';
 import timeIcon from "../assets/time.svg"
 import plusIcon from "../assets/plus.svg";
 import LoadingSpinner from './LoadingSpinner'
+import ContributeView from './ContributeView';
 
-const ProjectGrid = ({ connectionsData, onSaveProject, isLoading }) => {
+const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, isLoading }) => {
 
   const currentDate = new Date();
   const [projectData, setProjectData] = useState(null);
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const [showEditPopup, setShowEditPopup] = useState(false);
+  const [showContributePopup, setShowContributePopup] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
 
   const handleViewProject = (project) => {
@@ -37,6 +39,10 @@ const ProjectGrid = ({ connectionsData, onSaveProject, isLoading }) => {
     setShowEditPopup(false);
     setEditingProject(null);
   }
+
+  const handleOpenContribute = () => {
+    setShowContributePopup(true);
+  };
 
   return (
     <div>
@@ -114,6 +120,7 @@ const ProjectGrid = ({ connectionsData, onSaveProject, isLoading }) => {
                     handleEditProject(projectData);
                     handleCloseProfile();
                 }}
+                onBackClick={handleOpenContribute}
             />
           )}
 
@@ -127,6 +134,19 @@ const ProjectGrid = ({ connectionsData, onSaveProject, isLoading }) => {
               }}
             />
           )}
+
+          {showContributePopup && projectData && (
+            <ContributeView 
+              projectData={projectData}
+              onClose={() => setShowContributePopup(false)}
+              onContribute={(amount) => {
+                onContribute(projectData.id, amount);
+                setShowContributePopup(false);
+                handleCloseProfile();
+              }}
+            />
+          )}
+
         </div>
   )
 }

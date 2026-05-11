@@ -66,19 +66,16 @@ function App() {
       if (response.ok) {
         const savedProject = await response.json();
         
-        // 3. Update local state with UI-specific formatting
         const projectForUI = {
           ...savedProject,
-          banner: BannerImg, // Re-attach local asset
-          deadline: new Date(savedProject.deadline) // Convert back to Date object
+          banner: BannerImg,
+          deadline: new Date(savedProject.deadline)
         };
 
         setProjects(prev => {
           if (isEditing) {
-            // Replace the specific project in the array
             return prev.map(p => p.id === savedProject.id ? projectForUI : p);
           } else {
-            // Add the new project to the top
             return [ ...prev, projectForUI];
           }
         });
@@ -91,10 +88,40 @@ function App() {
     }
   };
 
+  const handleContribute = async (projectId, amount) => {
+  setIsLoading(true);
+  try {
+    const projectToUpdate = projects.find(p => p.id === projectId);
+    if (!projectToUpdate) return;
+
+    const updatedBalance = projectToUpdate.balance + amount;
+
+    const response = await fetch(`http://localhost:3001/projects/${projectId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ balance: updatedBalance })
+    });
+
+    if (response.ok) {
+      const updatedProject = await response.json();
+      
+      setProjects(prev => prev.map(p => 
+        p.id === projectId 
+          ? { ...p, balance: updatedProject.balance } 
+          : p
+      ));
+    }
+  } catch (err) {
+    console.error("Contribution error:", err);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
   return (
     <Routes>
       <Route element={<Layout/>}>
-        <Route path="/" element={<ProjectGrid connectionsData={projects} onSaveProject={handleSaveProject} isLoading={isLoading}/>}/>
+        <Route path="/" element={<ProjectGrid connectionsData={projects} onSaveProject={handleSaveProject} onContribute={handleContribute} isLoading={isLoading}/>}/>
       </Route>
     </Routes>
   )

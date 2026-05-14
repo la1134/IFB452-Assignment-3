@@ -1,7 +1,16 @@
+import { useState } from "react";
 import "../App.css";
 import searchIcon from "../assets/search.svg";
 
-function Header() {
+function Header({ onSearch }) {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleChange = (e) => {
+    setSearchQuery(e.target.value);
+    onSearch(e.target.value);
+  }
+
+
   return (
     <section className="p-4">
       <h1 className="pt-6 pb-12 text-6xl font-medium text-white">Ethstarter</h1>
@@ -19,7 +28,9 @@ function Header() {
           </div>
 
           <input 
-            type="text" 
+            type="text"
+            value={searchQuery}
+            onChange={handleChange} 
             className="block w-full border border-gray-300 rounded-lg py-2 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-blue-500" 
             placeholder="Search for a project"
           />

@@ -10,6 +10,9 @@ function App() {
 
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredProjects = projects.filter((project) => project.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -120,8 +123,8 @@ function App() {
 
   return (
     <Routes>
-      <Route element={<Layout/>}>
-        <Route path="/" element={<ProjectGrid connectionsData={projects} onSaveProject={handleSaveProject} onContribute={handleContribute} isLoading={isLoading}/>}/>
+      <Route element={<Layout onSearch={setSearchQuery} />}>
+        <Route path="/" element={<ProjectGrid connectionsData={filteredProjects} onSaveProject={handleSaveProject} onContribute={handleContribute} isLoading={isLoading}/>}/>
       </Route>
     </Routes>
   )

@@ -44,7 +44,7 @@ const LoginView = ({ onClose, onLogin }) => {
                 type="text"
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
-                placeholder="hello@example.com"
+                placeholder="0x000000000000"
                 className="bg-transparent py-2 outline-none w-full text-lg placeholder-gray-500"
                 autoFocus
               />

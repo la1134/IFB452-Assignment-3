@@ -1,154 +1,159 @@
 import { useState } from "react";
-import closeIcon from "../assets/close.svg"
-import timeIcon from "../assets/time.svg"
+import closeIcon from "../assets/close.svg";
+import { ethers } from "ethers";
+import { ESCROW_ABI } from "../contracts/EscrowContract";
+import { connectWallet } from "../web3";
 
-const EditView = ({ projectData, onSaveProject, onClose } ) => {
+const EditView = ({ projectData, onSaveProject, onClose }) => {
+  const currentDate = new Date().toISOString().split('T')[0];
+  const [isDeploying, setIsDeploying] = useState(false);
 
-    const currentDate = new Date().toISOString().split('T')[0];
+  const [formData, setFormData] = useState({
+    id: projectData?.id || null,
+    title: projectData?.title || "",
+    owner: projectData?.owner || "",
+    goal: projectData?.goal || "",
+    deadline: projectData?.deadline || "",
+    description: projectData?.description || "",
+    balance: projectData?.balance || 0
+  });
 
-    const [formData, setFormData] = useState({
-        id: projectData?.id || null,
-        title: projectData?.title || "",
-        owner: projectData?.owner || "",
-        goal: projectData?.goal || "",
-        deadline: projectData?.deadline || "",
-        description: projectData?.description || "",
-        balance: projectData?.balance || 0
-    });
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
+  const handlePublishClick = async () => {
+    if (!formData.title || !formData.goal || !formData.deadline) {
+      alert("Please fill in all required fields.");
+      return;
+    }
 
-    const handlePublishClick = () => {
-        if (!formData.title || !formData.goal || !formData.deadline) {
-            alert("Please fill in all required fields.");
-            return;
-        }
+    const goalNum = Number(formData.goal);
+    if (goalNum <= 0) {
+      alert("Funding goal must be greater than 0 ETH.");
+      return;
+    }
 
-        const goalNum = Number(formData.goal);
-        if (goalNum <= 0) {
-            alert("Funding goal must be greater than 0 ETH.");
-            return;
-        }
+    const selectedDate = new Date(formData.deadline);
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    if (selectedDate < todayDate) {
+      alert("The deadline cannot be in the past.");
+      return;
+    }
 
-        const selectedDate = new Date(formData.deadline);
-        const todayDate = new Date();
-        todayDate.setHours(0, 0, 0, 0);
-        if (selectedDate < todayDate) {
-            alert("The deadline cannot be in the past.");
-            return;
-        }
+    // ── If editing existing project, just save without deploying ──
+    if (formData.id) {
+      onSaveProject({ ...formData, goal: Number(formData.goal) });
+      return;
+    }
 
-        const finalData = {
-            ...formData,
-            goal: Number(formData.goal)
-        };
+    // ── Deploy new EscrowContract on-chain ──
+    setIsDeploying(true);
+    try {
+      const signer = await connectWallet();
+      if (!signer) {
+        alert("Please connect your MetaMask wallet first.");
+        setIsDeploying(false);
+        return;
+      }
 
-        onSaveProject(finalData);
-    };
+      // Calculate duration in days from today to deadline
+      const deadlineDate = new Date(formData.deadline);
+      const today = new Date();
+      const durationDays = Math.ceil((deadlineDate - today) / (1000 * 60 * 60 * 24));
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-            <div className="bg-[#43444d] rounded-xl w-full max-w-6xl h-[90vh] overflow-hidden flex flex-col">
-                <div className="flex justify-end items-center p-4 border-b">
-                    <button 
-                    onClick={onClose}
-                    className="cursor-pointer p-2 rounded-full"
-                    >
-                    <img src={closeIcon} className="w-6 h-6"/>
-                    </button>
-                </div>
-                <div className="overflow-y-auto text-white text-left px-16 py-4 space-y-6">
-                    <div className="form-group">
-                        <p className="pt-4 pb-1 text-lg font-semibold">Project Title</p>
-                        <input 
-                            type="text" 
-                            name="title"
-                            value={formData.title}
-                            onChange={handleChange}
-                            className="border-b-2 placeholder-gray-300" 
-                            placeholder="Project Title" 
-                            required
-                        />
-                    </div>
+      // Convert ETH goal to wei
+      const goalInWei = ethers.parseEther(String(formData.goal));
 
-                    <div className="form-group">
-                        <p className="pt-4 pb-1 text-lg font-semibold">Project Owner</p>
-                        <input 
-                            type="text" 
-                            name="owner"
-                            value={formData.owner}
-                            onChange={handleChange}
-                            className="border-b-2 placeholder-gray-300" 
-                            placeholder="Project Owner" 
-                            required
-                        />
-                    </div>
+      // Deploy the contract
+      const EscrowFactory = new ethers.ContractFactory(ESCROW_ABI, 
+        "0x60806040526000600460006101000a81548160ff0219169083151502179055503480156200002c57600080fd5b50604051620013a0380380620013a0833981810160405281019062000052919062000191565b6000821162000098576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016200008f906200025f565b60405180910390fd5b60008111620000de576040517f08c379a0000000000000000000000000000000000000000000000000000000008152600401620000d590620002d1565b60405180910390fd5b336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555081600181905550620151808162000136919062000322565b426200014391906200036d565b6002819055505050620003a8565b600080fd5b6000819050919050565b6200016b8162000156565b81146200017757600080fd5b50565b6000815190506200018b8162000160565b92915050565b60008060408385031215620001ab57620001aa62000151565b5b6000620001bb858286016200017a565b9250506020620001ce858286016200017a565b9150509250929050565b600082825260208201905092915050565b7f46756e64696e6720676f616c206d75737420626520677265617465722074686160008201527f6e207a65726f0000000000000000000000000000000000000000000000000000602082015250565b600062000247602683620001d8565b91506200025482620001e9565b604082019050919050565b600060208201905081810360008301526200027a8162000238565b9050919050565b7f4475726174696f6e206d757374206265206174206c6561737420312064617900600082015250565b6000620002b9601f83620001d8565b9150620002c68262000281565b602082019050919050565b60006020820190508181036000830152620002ec81620002aa565b9050919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b60006200032f8262000156565b91506200033c8362000156565b92508282026200034c8162000156565b91508282048414831517620003665762000365620002f3565b5b5092915050565b60006200037a8262000156565b9150620003878362000156565b9250828201905080821115620003a257620003a1620002f3565b5b92915050565b610fe880620003b86000396000f3fe60806040526004361061009c5760003560e01c8063590e1ae311610064578063590e1ae3146101765780637a3a0e841461018d5780637d3d6522146101b8578063c80ec522146101e3578063d7bb99ba1461020e578063e3cfef60146102185761009c565b806302d05d3f146100a157806312065fe0146100cc57806329dcb0cf146100f75780633ccfd60b1461012257806342e94c9014610139575b600080fd5b3480156100ad57600080fd5b506100b6610243565b6040516100c3919061095d565b60405180910390f35b3480156100d857600080fd5b506100e1610267565b6040516100ee9190610991565b60405180910390f35b34801561010357600080fd5b5061010c61026f565b6040516101199190610991565b60405180910390f35b34801561012e57600080fd5b50610137610275565b005b34801561014557600080fd5b50610160600480360381019061015b91906109dd565b6104f7565b60405161016d9190610991565b60405180910390f35b34801561018257600080fd5b5061018b61050f565b005b34801561019957600080fd5b506101a26107a1565b6040516101af9190610991565b60405180910390f35b3480156101c457600080fd5b506101cd6107a7565b6040516101da9190610a25565b60405180910390f35b3480156101ef57600080fd5b506101f86107b4565b6040516102059190610a25565b60405180910390f35b6102166107c7565b005b34801561022457600080fd5b5061022d6108f4565b60405161023a9190610991565b60405180910390f35b60008054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b600047905090565b60025481565b60008054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff1614610303576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016102fa90610a9d565b60405180910390fd5b600154471015610348576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161033f90610b09565b60405180910390fd5b600460009054906101000a900460ff1615610398576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161038f90610b75565b60405180910390fd5b6001600460006101000a81548160ff021916908315150217905550600047905060008060009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16826040516103ff90610bc6565b60006040518083038185875af1925050503d806000811461043c576040519150601f19603f3d011682016040523d82523d6000602084013e610441565b606091505b5050905080610485576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161047c90610c27565b60405180910390fd5b60008054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff167f7084f5476618d8e60b11ef0d7d3f06914655adb8793e28ff7f018d4c76d505d5836040516104eb9190610991565b60405180910390a25050565b60036020528060005260406000206000915090505481565b600254421015610554576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161054b90610c93565b60405180910390fd5b6001544710610598576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161058f90610d25565b60405180910390fd5b6000600360003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020541161061a576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161061190610d91565b60405180910390fd5b6000600360003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000205490506000600360003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000208190555060003373ffffffffffffffffffffffffffffffffffffffff16826040516106c990610bc6565b60006040518083038185875af1925050503d8060008114610706576040519150601f19603f3d011682016040523d82523d6000602084013e61070b565b606091505b505090508061074f576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161074690610dfd565b60405180910390fd5b3373ffffffffffffffffffffffffffffffffffffffff167fd7dee2702d63ad89917b6a4da9981c90c4d24f8c2bdfd64c604ecae57d8d0651836040516107959190610991565b60405180910390a25050565b60015481565b6000600154471015905090565b600460009054906101000a900460ff1681565b600254421061080b576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161080290610e69565b60405180910390fd5b6000341161084e576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161084590610efb565b60405180910390fd5b34600360003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020600082825461089d9190610f4a565b925050819055503373ffffffffffffffffffffffffffffffffffffffff167f62722348256371b5147820d6cad90c40fd2da1ccee18c3ed52c0bca5a61dbbab346040516108ea9190610991565b60405180910390a2565b600060025442106109085760009050610919565b426002546109169190610f7e565b90505b90565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b60006109478261091c565b9050919050565b6109578161093c565b82525050565b6000602082019050610972600083018461094e565b92915050565b6000819050919050565b61098b81610978565b82525050565b60006020820190506109a66000830184610982565b92915050565b600080fd5b6109ba8161093c565b81146109c557600080fd5b50565b6000813590506109d7816109b1565b92915050565b6000602082840312156109f3576109f26109ac565b5b6000610a01848285016109c8565b91505092915050565b60008115159050919050565b610a1f81610a0a565b82525050565b6000602082019050610a3a6000830184610a16565b92915050565b600082825260208201905092915050565b7f4f6e6c79207468652063726561746f722063616e207769746864726177000000600082015250565b6000610a87601d83610a40565b9150610a9282610a51565b602082019050919050565b60006020820190508181036000830152610ab681610a7a565b9050919050565b7f46756e64696e6720676f616c206e6f7420726561636865640000000000000000600082015250565b6000610af3601883610a40565b9150610afe82610abd565b602082019050919050565b60006020820190508181036000830152610b2281610ae6565b9050919050565b7f46756e647320616c72656164792077697468647261776e000000000000000000600082015250565b6000610b5f601783610a40565b9150610b6a82610b29565b602082019050919050565b60006020820190508181036000830152610b8e81610b52565b9050919050565b600081905092915050565b50565b6000610bb0600083610b95565b9150610bbb82610ba0565b600082019050919050565b6000610bd182610ba3565b9150819050919050565b7f5769746864726177616c207472616e73666572206661696c6564000000000000600082015250565b6000610c11601a83610a40565b9150610c1c82610bdb565b602082019050919050565b60006020820190508181036000830152610c4081610c04565b9050919050565b7f446561646c696e6520686173206e6f7420706173736564207965740000000000600082015250565b6000610c7d601b83610a40565b9150610c8882610c47565b602082019050919050565b60006020820190508181036000830152610cac81610c70565b9050919050565b7f46756e64696e6720676f616c20776173206d6574202d206e6f20726566756e6460008201527f7300000000000000000000000000000000000000000000000000000000000000602082015250565b6000610d0f602183610a40565b9150610d1a82610cb3565b604082019050919050565b60006020820190508181036000830152610d3e81610d02565b9050919050565b7f4e6f20636f6e747269627574696f6e20746f20726566756e6400000000000000600082015250565b6000610d7b601983610a40565b9150610d8682610d45565b602082019050919050565b60006020820190508181036000830152610daa81610d6e565b9050919050565b7f526566756e64207472616e73666572206661696c656400000000000000000000600082015250565b6000610de7601683610a40565b9150610df282610db1565b602082019050919050565b60006020820190508181036000830152610e1681610dda565b9050919050565b7f46756e64696e6720646561646c696e6520686173207061737365640000000000600082015250565b6000610e53601b83610a40565b9150610e5e82610e1d565b602082019050919050565b60006020820190508181036000830152610e8281610e46565b9050919050565b7f436f6e747269627574696f6e206d75737420626520677265617465722074686160008201527f6e207a65726f0000000000000000000000000000000000000000000000000000602082015250565b6000610ee5602683610a40565b9150610ef082610e89565b604082019050919050565b60006020820190508181036000830152610f1481610ed8565b9050919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b6000610f5582610978565b9150610f6083610978565b9250828201905080821115610f7857610f77610f1b565b5b92915050565b6000610f8982610978565b9150610f9483610978565b9250828203905081811115610fac57610fab610f1b565b5b9291505056fea264697066735822122084291fbc0ed6f485cc1b799e1305b120d972de58a1ae917ddeef8292eb723fc964736f6c63430008180033",
+          signer
+      );
 
-                    <div className="flex gap-x-30">
+      alert("Deploying contract... Please confirm in MetaMask.");
+      const contract = await EscrowFactory.deploy(goalInWei, durationDays);
+      await contract.waitForDeployment();
+      const contractAddress = await contract.getAddress();
 
-                        <div className="form-group">
-                            <p className="pt-4 pb-1 text-lg font-semibold">Funding Goal</p>
-                            <div className="relative flex items-center border-b-2 border-white transition-colors">
-                                <input 
-                                type="number"
-                                step="0.01"
-                                name="goal"
-                                min="0.000000000000000001"
-                                value={formData.goal}
-                                onChange={handleChange}
-                                className="bg-transparent py-1 outline-none placeholder-gray-300 flex-1" 
-                                placeholder="0.00" 
-                                required
-                                />
-                                <span className="ml-2 pb-1">ETH</span>
-                            </div>
-                        </div>
-                        
-                        <div className="form-group">
-                            <p className="pt-4 pb-1 text-lg font-semibold">Funding Deadline</p>
-                            <input 
-                                type="date" 
-                                name="deadline"
-                                min={currentDate}
-                                value={formData.deadline}
-                                onChange={handleChange}
-                                className="border-b-2 placeholder-gray-300" 
-                                placeholder="Funding Goal" 
-                                required
-                            />
-                        </div>
-                    </div>
+      // Save project with contract address
+      const finalData = {
+        ...formData,
+        goal: Number(formData.goal),
+        contractAddress: contractAddress,
+        creatorAddress: await signer.getAddress(),
+        balance: 0,
+      };
 
-                    <div className="form-group">
-                        <p className="pt-4 pb-1 text-lg font-semibold">Project Description</p>
-                        <textarea 
-                            type="text" 
-                            name="description"
-                            cols="30"
-                            rows="10"
-                            value={formData.description}
-                            onChange={handleChange}
-                            className="border-2 placeholder-gray-300 w-full" 
-                            placeholder="Project Description" 
-                            required
-                        />
-                    </div>
+      alert(`✅ Contract deployed at: ${contractAddress}`);
+      onSaveProject(finalData);
 
-                </div>
-                <div className="flex justify-start py-6 px-16">
-                    <button 
-                        className="bg-[#028858] text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-[#039260]"
-                        onClick={handlePublishClick}
-                    >
-                        {formData.id ? "Save Changes" : "Publish Project"}
-                    </button>
-                </div>
-            </div>
+    } catch (err) {
+      console.error("Deployment error:", err);
+      alert("Deployment failed: " + (err.reason || err.message));
+    } finally {
+      setIsDeploying(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+      <div className="bg-[#43444d] rounded-xl w-full max-w-6xl h-[90vh] overflow-hidden flex flex-col">
+        <div className="flex justify-end items-center p-4 border-b">
+          <button onClick={onClose} className="cursor-pointer p-2 rounded-full">
+            <img src={closeIcon} className="w-6 h-6"/>
+          </button>
         </div>
-    )
+        <div className="overflow-y-auto text-white text-left px-16 py-4 space-y-6">
+          <div className="form-group">
+            <p className="pt-4 pb-1 text-lg font-semibold">Project Title</p>
+            <input type="text" name="title" value={formData.title} onChange={handleChange}
+              className="border-b-2 placeholder-gray-300" placeholder="Project Title" required />
+          </div>
+          <div className="form-group">
+            <p className="pt-4 pb-1 text-lg font-semibold">Project Owner</p>
+            <input type="text" name="owner" value={formData.owner} onChange={handleChange}
+              className="border-b-2 placeholder-gray-300" placeholder="Project Owner" required />
+          </div>
+          <div className="flex gap-x-30">
+            <div className="form-group">
+              <p className="pt-4 pb-1 text-lg font-semibold">Funding Goal</p>
+              <div className="relative flex items-center border-b-2 border-white transition-colors">
+                <input type="number" step="0.01" name="goal" min="0.000000000000000001"
+                  value={formData.goal} onChange={handleChange}
+                  className="bg-transparent py-1 outline-none placeholder-gray-300 flex-1"
+                  placeholder="0.00" required />
+                <span className="ml-2 pb-1">ETH</span>
+              </div>
+            </div>
+            <div className="form-group">
+              <p className="pt-4 pb-1 text-lg font-semibold">Funding Deadline</p>
+              <input type="date" name="deadline" min={currentDate}
+                value={formData.deadline} onChange={handleChange}
+                className="border-b-2 placeholder-gray-300" required />
+            </div>
+          </div>
+          <div className="form-group">
+            <p className="pt-4 pb-1 text-lg font-semibold">Project Description</p>
+            <textarea type="text" name="description" cols="30" rows="10"
+              value={formData.description} onChange={handleChange}
+              className="border-2 placeholder-gray-300 w-full" placeholder="Project Description" required />
+          </div>
+        </div>
+        <div className="flex justify-start py-6 px-16">
+          <button
+            className="bg-[#028858] text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-[#039260] disabled:opacity-50"
+            onClick={handlePublishClick}
+            disabled={isDeploying}
+          >
+            {isDeploying ? "Deploying to blockchain..." : formData.id ? "Save Changes" : "Publish Project"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default EditView;

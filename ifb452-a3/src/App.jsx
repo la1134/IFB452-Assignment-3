@@ -48,7 +48,7 @@ function App() {
     } else {
       projectPayload = {
         ...formData,
-        id: Date.now().toLocaleString(),
+        id: Date.now().toString(),
         balance: 0,
       };
     }
@@ -79,7 +79,7 @@ function App() {
           if (isEditing) {
             return prev.map(p => p.id === savedProject.id ? projectForUI : p);
           } else {
-            return [ ...prev, projectForUI];
+            return [...prev, projectForUI];
           }
         });
       }
@@ -92,39 +92,64 @@ function App() {
   };
 
   const handleContribute = async (projectId, amount) => {
-  setIsLoading(true);
-  try {
-    const projectToUpdate = projects.find(p => p.id === projectId);
-    if (!projectToUpdate) return;
+    setIsLoading(true);
+    try {
+      const projectToUpdate = projects.find(p => p.id === projectId);
+      if (!projectToUpdate) return;
 
-    const updatedBalance = projectToUpdate.balance + amount;
+      const updatedBalance = projectToUpdate.balance + amount;
 
-    const response = await fetch(`http://localhost:3001/projects/${projectId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ balance: updatedBalance })
-    });
+      const response = await fetch(`http://localhost:3001/projects/${projectId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ balance: updatedBalance })
+      });
 
-    if (response.ok) {
-      const updatedProject = await response.json();
-      
-      setProjects(prev => prev.map(p => 
-        p.id === projectId 
-          ? { ...p, balance: updatedProject.balance } 
-          : p
-      ));
+      if (response.ok) {
+        const updatedProject = await response.json();
+        
+        setProjects(prev => prev.map(p => 
+          p.id === projectId 
+            ? { ...p, balance: updatedProject.balance } 
+            : p
+        ));
+      }
+    } catch (err) {
+      console.error("Contribution error:", err);
+    } finally {
+      setIsLoading(false);
     }
-  } catch (err) {
-    console.error("Contribution error:", err);
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
+
+  const handleDeleteProject = async (projectId) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`http://localhost:3001/projects/${projectId}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setProjects(prev => prev.filter(p => p.id !== projectId));
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("There was an error deleting the project.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Routes>
       <Route element={<Layout onSearch={setSearchQuery} />}>
-        <Route path="/" element={<ProjectGrid connectionsData={filteredProjects} onSaveProject={handleSaveProject} onContribute={handleContribute} isLoading={isLoading}/>}/>
+        <Route path="/" element={
+          <ProjectGrid 
+            connectionsData={filteredProjects} 
+            onSaveProject={handleSaveProject} 
+            onContribute={handleContribute}
+            onDelete={handleDeleteProject}
+            isLoading={isLoading}
+          />
+        }/>
       </Route>
     </Routes>
   )

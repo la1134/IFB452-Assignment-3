@@ -7,7 +7,7 @@ import plusIcon from "../assets/plus.svg";
 import LoadingSpinner from './LoadingSpinner'
 import ContributeView from './ContributeView';
 
-const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, isLoading }) => {
+const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, onDelete, isLoading }) => {
 
   const currentDate = new Date();
   const [projectData, setProjectData] = useState(null);
@@ -121,6 +121,7 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, isLoading }
                     handleCloseProfile();
                 }}
                 onBackClick={handleOpenContribute}
+                onDelete={onDelete}
             />
           )}
 

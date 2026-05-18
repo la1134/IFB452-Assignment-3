@@ -1,16 +1,54 @@
 import { useState } from "react";
 import closeIcon from "../assets/close.svg";
+import { ethers } from "ethers";
+import { ESCROW_ABI } from "../contracts/EscrowContract";
+import { connectWallet } from "../web3";
 
 const ContributeView = ({ projectData, onClose, onContribute }) => {
   const [amount, setAmount] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
       alert("Please enter a valid amount greater than 0.");
       return;
     }
-    onContribute(numAmount);
+
+    if (!projectData.contractAddress) {
+      alert("This project has no contract address. It may not have been deployed on-chain.");
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const signer = await connectWallet();
+      if (!signer) {
+        alert("Please connect your MetaMask wallet.");
+        return;
+      }
+
+      const contract = new ethers.Contract(
+        projectData.contractAddress,
+        ESCROW_ABI,
+        signer
+      );
+
+      const valueInWei = ethers.parseEther(String(numAmount));
+      alert("Sending contribution... Please confirm in MetaMask.");
+
+      const tx = await contract.contribute({ value: valueInWei });
+      await tx.wait();
+
+      alert(`✅ Successfully contributed ${numAmount} ETH!`);
+      onContribute(numAmount);
+
+    } catch (err) {
+      console.error("Contribution error:", err);
+      alert("Contribution failed: " + (err.reason || err.message));
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -26,6 +64,12 @@ const ContributeView = ({ projectData, onClose, onContribute }) => {
         <p className="mb-4 text-gray-300">
           Support <span className="font-semibold text-white">{projectData.title}</span>
         </p>
+
+        {projectData.contractAddress && (
+          <p className="mb-4 text-xs text-gray-400 font-mono break-all">
+            Contract: {projectData.contractAddress}
+          </p>
+        )}
 
         <div className="space-y-4">
           <div className="form-group">
@@ -43,12 +87,12 @@ const ContributeView = ({ projectData, onClose, onContribute }) => {
               <span className="ml-2 font-bold">ETH</span>
             </div>
           </div>
-
           <button
             onClick={handleConfirm}
-            className="w-full bg-[#028858] hover:bg-[#039260] py-3 rounded-lg font-bold transition-colors mt-4 cursor-pointer"
+            disabled={isProcessing}
+            className="w-full bg-[#028858] hover:bg-[#039260] py-3 rounded-lg font-bold transition-colors mt-4 cursor-pointer disabled:opacity-50"
           >
-            Contribute
+            {isProcessing ? "Processing..." : "Contribute"}
           </button>
         </div>
       </div>

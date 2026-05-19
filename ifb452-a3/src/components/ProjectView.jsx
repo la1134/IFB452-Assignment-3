@@ -127,7 +127,7 @@ const ProjectView = ({ projectData, onClose, onEdit, onDelete, onBackClick }) =>
 
           {/* ── NOT LOGGED IN ──────────────────────────────────────────── */}
           {!account && (
-            <p className="text-gray-400 text-sm self-center">Log in to fund this project.</p>
+            <p className="text-gray-400 text-sm self-center">Login to fund this project.</p>
           )}
 
           {/* ── BACKER ─────────────────────────────────────────────────── */}

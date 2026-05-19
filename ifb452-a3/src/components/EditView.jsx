@@ -127,7 +127,7 @@ const EditView = ({ projectData, onClose, onSaveProject }) => {
               name="title"
               value={formData.title}
               onChange={handleChange}
-              className="border-b-2 placeholder-gray-300 bg-transparent outline-none w-full"
+              className="border-b-2 placeholder-gray-300 bg-transparent outline-none w-1/3"
               placeholder="Project Title"
               required
             />
@@ -140,7 +140,7 @@ const EditView = ({ projectData, onClose, onSaveProject }) => {
               name="owner"
               value={formData.owner}
               onChange={handleChange}
-              className="border-b-2 placeholder-gray-300 bg-transparent outline-none w-full"
+              className="border-b-2 placeholder-gray-300 bg-transparent outline-none w-1/3"
               placeholder="Project Owner"
               required
             />
@@ -165,7 +165,7 @@ const EditView = ({ projectData, onClose, onSaveProject }) => {
               </div>
             </div>
 
-            <div className="form-group">
+            <div className="form-group border-b-2">
               <p className="pt-4 pb-1 text-lg font-semibold">Funding Deadline</p>
               <input
                 type="date"
@@ -173,7 +173,8 @@ const EditView = ({ projectData, onClose, onSaveProject }) => {
                 min={currentDate}
                 value={formData.deadline}
                 onChange={handleChange}
-                className="border-b-2 placeholder-gray-300 bg-transparent outline-none"
+                readOnly={!!formData.id}
+                className="placeholder-gray-300 bg-transparent outline-none"
                 required
               />
             </div>

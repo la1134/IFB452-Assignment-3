@@ -8,7 +8,6 @@ import { useWallet } from "./WalletContext";
 function Header({ onSearch }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-
   const { account, authType, logout } = useWallet();
 
   const handleChange = (e) => {
@@ -27,6 +26,13 @@ function Header({ onSearch }) {
   return (
     <section className="p-4">
 
+      {/* Account name */}
+      {account && (
+        <div className="absolute top-8 right-44 bg-gray-700 text-gray-200 text-sm px-3 py-2 rounded-lg font-mono">
+          {account.slice(0, 6)}...{account.slice(-4)}
+        </div>
+      )}
+
       {/* Login Button */}
       <div className="absolute top-8 right-10">
         <button
@@ -40,7 +46,7 @@ function Header({ onSearch }) {
             className="w-5 h-5"
           />
           <span>
-            {account ? `Logout (${authType})` : "Login"}
+            {account ? "Logout" : "Login"}
           </span>
         </button>
       </div>
@@ -49,11 +55,9 @@ function Header({ onSearch }) {
         Ethstarter
       </h1>
 
-      <p className="py-6 text-white-600">
+      <p className="py-6 text-white">
         Help realise the projects you love
       </p>
-
-      {/* Search */}
       <div className="w-full max-w-md mx-auto py-2">
         <div className="relative flex items-center">
 
@@ -79,7 +83,6 @@ function Header({ onSearch }) {
           onSuccess={() => setIsLoginOpen(false)}
         />
       )}
-
     </section>
   );
 }

@@ -65,7 +65,7 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, onDelete, i
         onClick={handleCreateClick}
       >
         <img src={plusIcon} alt="Plus" className="w-5 h-5" />
-        <span>{account ? "Create New Project" : "Login to Create Project"}</span>
+        <span>Create New Project</span>
       </button>
 
       <div className="pt-6">

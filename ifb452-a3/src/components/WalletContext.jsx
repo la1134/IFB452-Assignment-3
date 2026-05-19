@@ -5,53 +5,94 @@ const WalletContext = createContext();
 
 export function WalletProvider({ children }) {
   const [account, setAccount] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const [authType, setAuthType] = useState(null); // "metamask" | "manual"
   const [isLoading, setIsLoading] = useState(false);
 
+  // ── Restore session on page load ──────────────────────────────────────
   useEffect(() => {
-    // Auto-connect if previously connected
-    async function checkConnection() {
-      if (window.ethereum) {
-        const accounts = await window.ethereum.request({ method: "eth_accounts" });
-        if (accounts.length > 0) {
-          setAccount(accounts[0]);
-          setIsConnected(true);
-        }
-      }
-    }
-    checkConnection();
+    const savedAccount  = localStorage.getItem("wallet_account");
+    const savedAuthType = localStorage.getItem("wallet_authType");
 
+    if (savedAuthType === "metamask" && window.ethereum) {
+      // Re-verify MetaMask still has the account connected
+      window.ethereum
+        .request({ method: "eth_accounts" })
+        .then((accounts) => {
+          if (accounts.length > 0) {
+            setAccount(accounts[0]);
+            setAuthType("metamask");
+          } else {
+            // MetaMask was disconnected externally — clear storage
+            clearSession();
+          }
+        });
+    } else if (savedAuthType === "manual" && savedAccount) {
+      setAccount(savedAccount);
+      setAuthType("manual");
+    }
+
+    // Listen for MetaMask account switches
     onAccountChange((accounts) => {
       if (accounts.length > 0) {
         setAccount(accounts[0]);
-        setIsConnected(true);
+        setAuthType("metamask");
+        localStorage.setItem("wallet_account",  accounts[0]);
+        localStorage.setItem("wallet_authType", "metamask");
       } else {
-        setAccount(null);
-        setIsConnected(false);
+        clearSession();
       }
     });
 
     onNetworkChange(() => window.location.reload());
   }, []);
 
+  function clearSession() {
+    setAccount(null);
+    setAuthType(null);
+    localStorage.removeItem("wallet_account");
+    localStorage.removeItem("wallet_authType");
+  }
+
+  // ── MetaMask ──────────────────────────────────────────────────────────
   async function connect() {
     setIsLoading(true);
     try {
-      const signer = await connectWallet();
-      if (signer) {
-        const address = await signer.getAddress();
-        setAccount(address);
-        setIsConnected(true);
-      }
+      const signer  = await connectWallet();
+      const address = await signer.getAddress();
+      setAccount(address);
+      setAuthType("metamask");
+      localStorage.setItem("wallet_account",  address);
+      localStorage.setItem("wallet_authType", "metamask");
+      return signer;
     } catch (err) {
-      console.error("Wallet connection failed:", err);
+      console.error("Wallet error:", err);
+      return null;
     } finally {
       setIsLoading(false);
     }
   }
 
+  // ── Manual ────────────────────────────────────────────────────────────
+  function loginManual(walletAddress, privateKey) {
+    if (!walletAddress || !privateKey) {
+      alert("Please fill in both fields.");
+      return null;
+    }
+    setAccount(walletAddress);
+    setAuthType("manual");
+    localStorage.setItem("wallet_account",  walletAddress);
+    localStorage.setItem("wallet_authType", "manual");
+    return walletAddress;
+  }
+
+  function logout() {
+    clearSession();
+  }
+
   return (
-    <WalletContext.Provider value={{ account, isConnected, isLoading, connect }}>
+    <WalletContext.Provider
+      value={{ account, authType, isLoading, connect, loginManual, logout }}
+    >
       {children}
     </WalletContext.Provider>
   );

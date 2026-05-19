@@ -19,6 +19,13 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, onDelete, i
   const [showLoginPopup,     setShowLoginPopup]      = useState(false);
   const [editingProject,     setEditingProject]      = useState(null);
 
+  const [activeTab, setActiveTab] = useState("all");
+  const filteredProjects = connectionsData.filter((project) => {
+    if (activeTab === "funded")  return project.contributors?.includes(account);
+    if (activeTab === "created") return project.creatorAddress === account;
+    return true;
+  });
+
   const handleViewProject = (project) => {
     setProjectData({
       ...project,
@@ -68,12 +75,35 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, onDelete, i
         <span>Create New Project</span>
       </button>
 
+      {/* Tabs */}
+      <div className="flex items-center justify-center pt-8">
+        {[
+          { key: "all",     label: "All Projects" },
+          { key: "funded",  label: "Projects I've Funded" },
+          { key: "created", label: "Projects I've Created" },
+        ].map(({ key, label }, index, arr) => (
+          <div key={key} className="flex items-center">
+            <button
+              onClick={() => setActiveTab(key)}
+              className={`px-4 py-2 text-md font-medium transition-colors cursor-pointer ${
+                activeTab === key ? "text-white" : "text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              {label}
+            </button>
+            {index < arr.length - 1 && (
+              <span className="text-gray-500 select-none">|</span>
+            )}
+          </div>
+        ))}
+      </div>
+
       <div className="pt-6">
         {isLoading ? (
           <LoadingSpinner />
         ) : (
           <div className="grid sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 w-[75%] mx-auto">
-            {connectionsData.map((project) => {
+            {filteredProjects.map((project) => {
               const daysLeft         = Math.ceil((project.deadline - currentDate) / (1000 * 60 * 60 * 24));
               const percentageFunded = Math.round((project.balance / project.goal) * 100);
               const barWidth         = Math.min(percentageFunded, 100);

@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { useWallet } from './components/WalletContext'
 import "./App.css"
 import Layout from './components/Layout'
 import ProjectGrid from './components/ProjectGrid'
@@ -8,6 +9,7 @@ import BannerImg from './assets/banner.jpg';
 
 function App() {
 
+  const { account } = useWallet();
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -97,20 +99,21 @@ function App() {
       const projectToUpdate = projects.find(p => p.id === projectId);
       if (!projectToUpdate) return;
 
-      const updatedBalance = projectToUpdate.balance + amount;
+      const updatedBalance     = projectToUpdate.balance + amount;
+      const updatedContributors = [...new Set([...(projectToUpdate.contributors ?? []), account])];
 
       const response = await fetch(`http://localhost:3001/projects/${projectId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ balance: updatedBalance })
+        body: JSON.stringify({ balance: updatedBalance, contributors: updatedContributors })
       });
 
       if (response.ok) {
         const updatedProject = await response.json();
-        
-        setProjects(prev => prev.map(p => 
-          p.id === projectId 
-            ? { ...p, balance: updatedProject.balance } 
+
+        setProjects(prev => prev.map(p =>
+          p.id === projectId
+            ? { ...p, balance: updatedProject.balance, contributors: updatedProject.contributors }
             : p
         ));
       }

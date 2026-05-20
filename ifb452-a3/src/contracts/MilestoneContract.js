@@ -1,10 +1,15 @@
-export const MILESTONE_ABI = [
+export const MILESTONE_ABI =
   [
     {
       "inputs": [
         {
           "internalType": "address",
           "name": "_escrowAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_caller",
           "type": "address"
         }
       ],
@@ -193,6 +198,29 @@ export const MILESTONE_ABI = [
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "getParentProjectMetadata",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "parentTitle",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "parentOwner",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "parentDescription",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -328,6 +356,4 @@ export const MILESTONE_ABI = [
       "stateMutability": "nonpayable",
       "type": "function"
     }
-  ]
-];
-export const MILESTONE_ADDRESS = "0x..."; // paste deployed address
+  ];

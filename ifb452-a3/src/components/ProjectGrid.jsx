@@ -10,7 +10,7 @@ import { useWallet } from './WalletContext';
 import { ethers } from "ethers";
 import { ESCROW_ABI } from '../contracts/EscrowContract';
 
-const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, onDelete, isLoading }) => {
+const ProjectGrid = ({ connectionsData, onSaveProject, onDeployMilestone, milestoneAddresses, onContribute, onMilestoneContribute, onDelete, isLoading }) => {
   const { account } = useWallet();
 
   const [projectData,         setProjectData]         = useState(null);
@@ -51,11 +51,6 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, onDelete, i
   // Tab Filtering
   const filteredProjects = connectionsData.filter((project) => {
     if (!project) return false;
-
-    const secondsLeft = chainTimes[project.id];
-    const isExpired = secondsLeft !== undefined ? secondsLeft === 0 : new Date(project.deadline) < new Date();
-    const isEmpty = (project.balance ?? 0) === 0;
-    if (isExpired && isEmpty) return false;
     
     if (activeTab === "funded") {
       // Find if user funded
@@ -144,6 +139,7 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, onDelete, i
             {filteredProjects.map((project) => {
 
               // Calculate time left
+              const hasMilestone = !!milestoneAddresses?.[project.contractAddress];
               const secondsLeft = chainTimes[project.id];
               const daysLeft = secondsLeft !== undefined 
                 ? Math.ceil(secondsLeft / (24 * 60 * 60)) 
@@ -176,15 +172,24 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, onDelete, i
                           </div>
 
                           <div className="flex items-center gap-x-2 flex-1">
-                            <div className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-green-500 transition-all duration-500 ease-out"
-                                style={{ width: `${barWidth}%` }}
-                              />
-                            </div>
-                            <p className="text-sm font-semibold text-gray-200 whitespace-nowrap shrink-0">
-                              {percentageFunded}% funded
-                            </p>
+                            {hasMilestone ? (
+                              // Show "Funded" badge when Milestone contract is active
+                              <div className="w-full flex items-center justify-center bg-green-900/40 border border-green-600/50 rounded-lg py-1">
+                                <span className="text-green-300 text-sm font-bold">Funded</span>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-green-500 transition-all duration-500 ease-out"
+                                    style={{ width: `${barWidth}%` }}
+                                  />
+                                </div>
+                                <p className="text-sm font-semibold text-gray-200 whitespace-nowrap shrink-0">
+                                  {percentageFunded}% funded
+                                </p>
+                              </>
+                            )}
                           </div>
 
                         </div>
@@ -208,6 +213,9 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, onDelete, i
           }}
           onDelete={onDelete}
           onBackClick={handleOpenContribute}
+          onMilestoneContribute={onMilestoneContribute}
+          onDeployMilestone={onDeployMilestone}
+          milestoneAddress={milestoneAddresses?.[projectData.contractAddress]}
         />
       )}
 

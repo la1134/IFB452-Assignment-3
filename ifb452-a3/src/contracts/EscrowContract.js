@@ -242,6 +242,19 @@ export const ESCROW_ABI =
     },
     {
       "inputs": [],
+      "name": "goalWasMet",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "ownerName",
       "outputs": [
         {

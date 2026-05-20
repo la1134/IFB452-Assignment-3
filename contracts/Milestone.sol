@@ -28,11 +28,11 @@ contract MilestoneContract {
     event Refunded(uint256 indexed roundId, address indexed backer, uint256 amount);
 
     // ─── Constructor ───────────────────────────────────────────────────
-    constructor(address _escrowAddress) {
+    constructor(address _escrowAddress, address _caller) {
         EscrowContract _escrow = EscrowContract(_escrowAddress);
 
         require(
-            msg.sender == _escrow.creator(),
+            _caller == _escrow.creator(),
             "Only the escrow creator can deploy milestone contract"
         );
         require(
@@ -44,7 +44,7 @@ contract MilestoneContract {
             "Escrow was not successfully funded and withdrawn"
         );
 
-        creator   = msg.sender;
+        creator   = _caller;
         escrow    = _escrow;
         roundCount = 0;
     }

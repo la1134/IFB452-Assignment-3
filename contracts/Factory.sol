@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "./Escrow.sol"; // Note: Verified your file name from previous step
+import "./Escrow.sol";
+import "./Milestone.sol";
 
 contract EscrowFactory {
     address[] public allEscrows;
@@ -42,5 +43,29 @@ contract EscrowFactory {
      */
     function getAllEscrows() external view returns (address[] memory) {
         return allEscrows;
+    }
+}
+
+contract MilestoneFactory {
+    mapping(address => address) public escrowToMilestone; // escrow → milestone
+    address[] public allMilestones;
+
+    event MilestoneCreated(address indexed milestoneAddress, address indexed escrowAddress, address indexed creator);
+
+    function createMilestone(address _escrowAddress) external returns (address) {
+        require(escrowToMilestone[_escrowAddress] == address(0), "Milestone already exists for this escrow");
+
+        MilestoneContract newMilestone = new MilestoneContract(_escrowAddress, msg.sender);
+
+        address milestoneAddr = address(newMilestone);
+        escrowToMilestone[_escrowAddress] = milestoneAddr;
+        allMilestones.push(milestoneAddr);
+
+        emit MilestoneCreated(milestoneAddr, _escrowAddress, msg.sender);
+        return milestoneAddr;
+    }
+
+    function getMilestoneForEscrow(address _escrowAddress) external view returns (address) {
+        return escrowToMilestone[_escrowAddress];
     }
 }

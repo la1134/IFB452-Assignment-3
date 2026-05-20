@@ -1,141 +1,139 @@
 import { Routes, Route } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { useWallet } from './components/WalletContext'
+import { useWallet } from './components/WalletContext' // Consuming your custom context
+import { ethers } from 'ethers'
 import "./App.css"
 import Layout from './components/Layout'
 import ProjectGrid from './components/ProjectGrid'
-import projectDataRaw from './data/projects.json';
-import BannerImg from './assets/banner.jpg';
+import BannerImg from './assets/banner.jpg'
+
+import { ESCROW_ABI } from './contracts/EscrowContract'
+import { FACTORY_ABI } from './contracts/EscrowFactory'
+const FACTORY_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; 
 
 function App() {
-
-  const { account } = useWallet();
+  const { account, getSignerOrProvider } = useWallet(); // Added getSignerOrProvider here
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredProjects = projects.filter((project) => project.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredProjects = projects.filter((project) => 
+    project && project.title && project.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // ── Fetch all addresses dynamically from the Factory ─────────────────
+  const fetchBlockchainProjects = async () => {
+    setIsLoading(true);
+    try {
+      const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
+      const factoryContract = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
+      
+      const contractAddresses = await factoryContract.getAllEscrows();
+      
+      const projectPromises = contractAddresses.map(async (address) => {
+        try {
+          const contract = new ethers.Contract(address, ESCROW_ABI, provider);
+          const details = await contract.getProjectDetails();
+          
+          const fundingGoalEth = Number(ethers.formatEther(details._fundingGoal));
+          const balanceEth      = Number(ethers.formatEther(details._balance));
+          const percentage      = fundingGoalEth > 0 ? (balanceEth / fundingGoalEth) * 100 : 0;
+          
+          const deadlineMs      = Number(details._deadline) * 1000;
+          const daysLeftCalculated = Math.max(0, Math.ceil((deadlineMs - Date.now()) / (1000 * 60 * 60 * 24)));
+
+          return {
+            id: address, 
+            contractAddress: address,
+            title: details._title,
+            owner: details._ownerName,
+            description: details._description,
+            goal: fundingGoalEth,
+            balance: balanceEth,
+            percentageFunded: Math.round(percentage),
+            deadline: new Date(deadlineMs),
+            daysLeft: daysLeftCalculated,
+            creatorAddress: details._creator,
+            banner: BannerImg
+          };
+        } catch (innerErr) {
+          console.error(`Error reading individual project data at ${address}:`, innerErr);
+          return null;
+        }
+      });
+
+      const loadedProjects = await Promise.all(projectPromises);
+      setProjects(loadedProjects.filter(p => p !== null));
+    } catch (err) {
+      console.error("Error reading factory data:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProjects = async () => {
-      setIsLoading(true);
-      try {
-        const response = await fetch('http://localhost:3001/projects');
-        const data = await response.json();
-        
-        const formattedData = data.map(p => ({
-          ...p,
-          deadline: new Date(p.deadline),
-          banner: BannerImg
-        }));
-        setProjects(formattedData);
-      } catch (err) {
-        console.error("Server not running? Run npx json-server...", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProjects();
+    fetchBlockchainProjects();
   }, []);
 
+  // ── Deploy New Project via Factory Contract ──────────────────────────
   const handleSaveProject = async (formData) => {
-    setIsLoading(true);
-    
-    const isEditing = !!formData.id;
-    
-    let projectPayload;
-    if (isEditing) {
-      projectPayload = { ...formData };
-    } else {
-      projectPayload = {
-        ...formData,
-        id: Date.now().toString(),
-        balance: 0,
-      };
+    if (!account) {
+      alert("Please connect your wallet or log in manually first.");
+      return;
     }
 
-    const url = isEditing 
-      ? `http://localhost:3001/projects/${projectPayload.id}` 
-      : 'http://localhost:3001/projects';
+    setIsLoading(true);
+    try {
+      // FIX: Dynamically resolve either MetaMask signer or Hardhat manual Wallet
+      const signerOrWallet = await getSignerOrProvider();
       
-    const method = isEditing ? 'PUT' : 'POST';
+      // Connect to the deployed master factory instance using the resolved execution client
+      const factoryContract = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signerOrWallet);
 
-    try {
-      const response = await fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(projectPayload)
-      });
+      const goalInWei = ethers.parseEther(formData.goal.toString());
+      const deadlineTimestamp = Number(formData.deadline); 
 
-      if (response.ok) {
-        const savedProject = await response.json();
-        
-        const projectForUI = {
-          ...savedProject,
-          banner: BannerImg,
-          deadline: new Date(savedProject.deadline)
-        };
+      const tx = await factoryContract.createEscrow(
+        goalInWei,
+        deadlineTimestamp, 
+        formData.title,
+        formData.owner,
+        formData.description
+      );
 
-        setProjects(prev => {
-          if (isEditing) {
-            return prev.map(p => p.id === savedProject.id ? projectForUI : p);
-          } else {
-            return [...prev, projectForUI];
-          }
-        });
-      }
+      await tx.wait();
+      await fetchBlockchainProjects();
     } catch (err) {
-      console.error("Save error:", err);
-      alert("There was an error saving the project.");
+      console.error("Factory execution failure:", err);
+      alert("Error: " + (err.reason ?? err.message));
+      throw err;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleContribute = async (projectId, amount) => {
-    setIsLoading(true);
-    try {
-      const projectToUpdate = projects.find(p => p.id === projectId);
-      if (!projectToUpdate) return;
-
-      const updatedBalance     = projectToUpdate.balance + amount;
-      const updatedContributors = [...new Set([...(projectToUpdate.contributors ?? []), account])];
-
-      const response = await fetch(`http://localhost:3001/projects/${projectId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ balance: updatedBalance, contributors: updatedContributors })
-      });
-
-      if (response.ok) {
-        const updatedProject = await response.json();
-
-        setProjects(prev => prev.map(p =>
-          p.id === projectId
-            ? { ...p, balance: updatedProject.balance, contributors: updatedProject.contributors }
-            : p
-        ));
-      }
-    } catch (err) {
-      console.error("Contribution error:", err);
-    } finally {
-      setIsLoading(false);
+  // ── Contribute Funds On-Chain ──────────────────────────────────────
+  const handleContribute = async (contractAddress, amountEth) => {
+    if (!account) {
+      alert("Please connect your wallet or log in manually first.");
+      return;
     }
-  };
-
-  const handleDeleteProject = async (projectId) => {
+    
     setIsLoading(true);
     try {
-      const response = await fetch(`http://localhost:3001/projects/${projectId}`, {
-        method: 'DELETE',
+      // FIX: Dynamically resolve either MetaMask signer or Hardhat manual Wallet
+      const signerOrWallet = await getSignerOrProvider();
+      const contract = new ethers.Contract(contractAddress, ESCROW_ABI, signerOrWallet);
+
+      const tx = await contract.contribute({
+        value: ethers.parseEther(amountEth.toString())
       });
-      if (response.ok) {
-        setProjects(prev => prev.filter(p => p.id !== projectId));
-      }
+      
+      await tx.wait();
+      await fetchBlockchainProjects();
     } catch (err) {
-      console.error("Delete error:", err);
-      alert("There was an error deleting the project.");
+      console.error("Transaction failed:", err);
+      alert("Transaction error: " + (err.reason ?? err.message));
     } finally {
       setIsLoading(false);
     }
@@ -144,12 +142,11 @@ function App() {
   return (
     <Routes>
       <Route element={<Layout onSearch={setSearchQuery} />}>
-        <Route path="/" element={
+        <Route path="/" element = {
           <ProjectGrid 
             connectionsData={filteredProjects} 
             onSaveProject={handleSaveProject} 
             onContribute={handleContribute}
-            onDelete={handleDeleteProject}
             isLoading={isLoading}
           />
         }/>
@@ -158,4 +155,4 @@ function App() {
   )
 }
 
-export default App
+export default App;

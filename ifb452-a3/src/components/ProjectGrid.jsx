@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ProjectView from './ProjectView';
 import EditView from './EditView';
 import LoginView from './LoginView';
@@ -7,12 +7,13 @@ import plusIcon from "../assets/plus.svg";
 import LoadingSpinner from './LoadingSpinner';
 import ContributeView from './ContributeView';
 import { useWallet } from './WalletContext';
+import { ethers } from "ethers";
+import { ESCROW_ABI } from '../contracts/EscrowContract';
 
 const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, onDelete, isLoading }) => {
   const { account } = useWallet();
 
-  const currentDate = new Date();
-  const [projectData,        setProjectData]        = useState(null);
+  const [projectData,         setProjectData]         = useState(null);
   const [showProfilePopup,   setShowProfilePopup]   = useState(false);
   const [showEditPopup,      setShowEditPopup]       = useState(false);
   const [showContributePopup,setShowContributePopup] = useState(false);
@@ -20,18 +21,57 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, onDelete, i
   const [editingProject,     setEditingProject]      = useState(null);
 
   const [activeTab, setActiveTab] = useState("all");
+  const [chainTimes, setChainTimes] = useState({});
+
+  useEffect(() => {
+    const fetchAllTimes = async () => {
+      if (!window.ethereum) return;
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      
+      const newTimes = {};
+      await Promise.all(
+        connectionsData.map(async (project) => {
+          if (project.contractAddress) {
+            try {
+              const contract = new ethers.Contract(project.contractAddress, ESCROW_ABI, provider);
+              const remaining = await contract.timeRemaining();
+              newTimes[project.id] = Number(remaining);
+            } catch (err) {
+              console.error(`Error fetching time for ${project.id}:`, err);
+            }
+          }
+        })
+      );
+      setChainTimes(newTimes);
+    };
+
+    fetchAllTimes();
+  }, [connectionsData]);
+  
+  // Tab Filtering
   const filteredProjects = connectionsData.filter((project) => {
-    if (activeTab === "funded")  return project.contributors?.includes(account);
-    if (activeTab === "created") return project.creatorAddress === account;
+    if (!project) return false;
+
+    const secondsLeft = chainTimes[project.id];
+    const isExpired = secondsLeft !== undefined ? secondsLeft === 0 : new Date(project.deadline) < new Date();
+    const isEmpty = (project.balance ?? 0) === 0;
+    if (isExpired && isEmpty) return false;
+    
+    if (activeTab === "funded") {
+      // Find if user funded
+      return project.contributionBalance > 0;
+    }
+    
+    if (activeTab === "created") {
+      // Find if user creator
+      return project.creatorAddress?.toLowerCase() === account?.toLowerCase();
+    }
+    
     return true;
   });
 
   const handleViewProject = (project) => {
-    setProjectData({
-      ...project,
-      daysLeft: Math.ceil((project.deadline - currentDate) / (1000 * 60 * 60 * 24)),
-      percentageFunded: Math.round((project.balance / project.goal) * 100),
-    });
+    setProjectData(project);
     setShowProfilePopup(true);
   };
 
@@ -54,19 +94,17 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, onDelete, i
     setShowContributePopup(true);
   };
 
-  // "Create New Project" — require login first
   const handleCreateClick = () => {
     if (!account) {
-      setShowLoginPopup(true); // show login modal
+      setShowLoginPopup(true);
     } else {
-      handleEditProject(null); // go straight to create form
+      handleEditProject(null);
     }
   };
 
   return (
     <div>
-
-      {/* ── Create button — shows Login if not logged in ───────────────── */}
+      {/* Create Button */}
       <button
         className="flex items-center gap-2 bg-[#028858] text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-[#039260] transition-colors mx-auto"
         onClick={handleCreateClick}
@@ -75,7 +113,7 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, onDelete, i
         <span>Create New Project</span>
       </button>
 
-      {/* Tabs */}
+      {/* Tabs Layout */}
       <div className="flex items-center justify-center pt-8">
         {[
           { key: "all",     label: "All Projects" },
@@ -104,9 +142,14 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, onDelete, i
         ) : (
           <div className="grid sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 w-[75%] mx-auto">
             {filteredProjects.map((project) => {
-              const daysLeft         = Math.ceil((project.deadline - currentDate) / (1000 * 60 * 60 * 24));
-              const percentageFunded = Math.round((project.balance / project.goal) * 100);
-              const barWidth         = Math.min(percentageFunded, 100);
+
+              // Calculate time left
+              const secondsLeft = chainTimes[project.id];
+              const daysLeft = secondsLeft !== undefined 
+                ? Math.ceil(secondsLeft / (24 * 60 * 60)) 
+                : (project.daysLeft ?? 0);
+              const percentageFunded = project.percentageFunded ?? 0;
+              const barWidth = Math.min(percentageFunded, 100);
 
               return (
                 <div key={project.id} className="flex flex-col items-center m-2">
@@ -155,8 +198,6 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, onDelete, i
         )}
       </div>
 
-      {/* ── Modals ───────────────────────────────────────────────────────── */}
-
       {showProfilePopup && projectData && (
         <ProjectView
           projectData={projectData}
@@ -174,9 +215,9 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, onDelete, i
         <EditView
           projectData={editingProject}
           onClose={handleCloseEdit}
-          onSaveProject={(data) => {
-            onSaveProject(data);
-            handleCloseEdit();
+          onSaveProject={async (data) => {
+              await onSaveProject(data);
+              handleCloseEdit();
           }}
         />
       )}
@@ -185,21 +226,20 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onContribute, onDelete, i
         <ContributeView
           projectData={projectData}
           onClose={() => setShowContributePopup(false)}
-          onContribute={(amount) => {
-            onContribute(projectData.id, amount);
+          onContribute={(contractAddress, amount) => {
+            onContribute(contractAddress, amount); 
             setShowContributePopup(false);
             handleCloseProfile();
           }}
         />
       )}
 
-      {/* Login modal triggered by Create button when not logged in */}
       {showLoginPopup && (
         <LoginView
           onClose={() => setShowLoginPopup(false)}
           onSuccess={() => {
             setShowLoginPopup(false);
-            handleEditProject(null); // open create form after login
+            handleEditProject(null);
           }}
         />
       )}

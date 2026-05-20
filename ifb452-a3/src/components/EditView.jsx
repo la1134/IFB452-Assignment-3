@@ -1,21 +1,19 @@
 import { useState } from "react";
-import { ethers } from "ethers";
 import closeIcon from "../assets/close.svg";
 import { useWallet } from "./WalletContext";
-import { ESCROW_ABI, ESCROW_BYTECODE } from "../contracts/EscrowContract";
 
 const EditView = ({ projectData, onClose, onSaveProject }) => {
   const { account } = useWallet();
-
   const currentDate = new Date().toISOString().split("T")[0];
 
+  // default Form Data
   const [formData, setFormData] = useState({
     id:              projectData?.id              ?? null,
     title:           projectData?.title           ?? "",
     owner:           projectData?.owner           ?? "",
     goal:            projectData?.goal            ?? "",
     deadline:        projectData?.deadline
-      ? new Date(projectData.deadline).toISOString().split("T")[0]
+      ? new Date(projectData.deadline * 1000).toISOString().split("T")[0] 
       : "",
     description:     projectData?.description     ?? "",
     balance:         projectData?.balance         ?? 0,
@@ -24,14 +22,16 @@ const EditView = ({ projectData, onClose, onSaveProject }) => {
   });
 
   const [isDeploying, setIsDeploying] = useState(false);
+  const hasContract = !!formData.contractAddress;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Publishing
   const handlePublishClick = async () => {
-    if (!formData.title || !formData.goal || !formData.deadline) {
+    if (!formData.title || !formData.owner || !formData.goal || !formData.deadline || !formData.description) {
       alert("Please fill in all required fields.");
       return;
     }
@@ -41,62 +41,46 @@ const EditView = ({ projectData, onClose, onSaveProject }) => {
       alert("Funding goal must be greater than 0 ETH.");
       return;
     }
+    
+    const parts = formData.deadline.split("-");
+    const targetDeadlineDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    
+    // Set deadline to the precise end of that selected calendar day (23:59:59)
+    targetDeadlineDate.setHours(23, 59, 59, 999);
 
-    const selectedDate = new Date(formData.deadline);
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-    if (selectedDate < todayDate) {
-      alert("The deadline cannot be in the past.");
+    // Compute absolute Unix timestamp representation (seconds instead of milliseconds)
+    const deadlineTimestamp = Math.floor(targetDeadlineDate.getTime() / 1000);
+    const currentUnixTime = Math.floor(Date.now() / 1000);
+
+    if (deadlineTimestamp <= currentUnixTime) {
+      alert("The deadline must be a future time.");
       return;
     }
 
-    const finalData = { ...formData, goal: Number(formData.goal) };
+    // Validation Guardrails
+    const cleanTitle = String(formData.title).trim();
+    const cleanOwner = String(formData.owner).trim();
+    const cleanDesc  = String(formData.description).trim();
 
-    // ── Editing — just save, no re-deploy ─────────────────────────────
-    if (formData.id) {
-      onSaveProject(finalData);
-      return;
-    }
+    if (cleanTitle.length === 0 || cleanTitle.length > 50) return alert("Title must be between 1 and 50 characters.");
+    if (cleanOwner.length === 0 || cleanOwner.length > 40) return alert("Owner name must be between 1 and 40 characters.");
+    if (cleanDesc.length === 0 || cleanDesc.length > 280) return alert("Description must be between 1 and 280 characters.");
 
-    // ── New project — deploy EscrowContract on-chain ──────────────────
-    if (!window.ethereum) {
-      alert("MetaMask is required to deploy a project on-chain.");
-      return;
-    }
-
-    if (!ESCROW_BYTECODE || ESCROW_BYTECODE === "0x...") {
-      alert(
-        "No contract bytecode found.\n\n" +
-        "Paste your compiled ESCROW_BYTECODE into contracts/EscrowContract.js to enable on-chain deployment."
-      );
-      return;
-    }
+    const finalData = { 
+      ...formData, 
+      title: cleanTitle,
+      owner: cleanOwner,
+      description: cleanDesc,
+      goal: goalNum, 
+      deadline: deadlineTimestamp 
+    };
 
     try {
       setIsDeploying(true);
-
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer   = await provider.getSigner();
-
-      const deadlineDate = new Date(formData.deadline);
-      const today        = new Date();
-      const durationDays = Math.max(
-        1,
-        Math.ceil((deadlineDate - today) / (1000 * 60 * 60 * 24))
-      );
-
-      const goalInWei = ethers.parseEther(String(formData.goal));
-
-      const factory  = new ethers.ContractFactory(ESCROW_ABI[0], ESCROW_BYTECODE, signer);
-      const contract = await factory.deploy(goalInWei, durationDays);
-      await contract.waitForDeployment();
-
-      const contractAddress = await contract.getAddress();
-
-      onSaveProject({ ...finalData, contractAddress });
+      await onSaveProject(finalData);
+      onClose();
     } catch (err) {
-      console.error("Deployment error:", err);
-      alert("Deployment failed: " + (err.reason ?? err.message));
+      console.error("Form handling exception:", err);
     } finally {
       setIsDeploying(false);
     }
@@ -106,20 +90,17 @@ const EditView = ({ projectData, onClose, onSaveProject }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
       <div className="bg-[#43444d] rounded-xl w-full max-w-6xl h-[90vh] overflow-hidden flex flex-col">
 
-        {/* Top bar */}
         <div className="flex justify-end items-center p-4 border-b border-gray-600">
           <button
             onClick={onClose}
             disabled={isDeploying}
-            className="cursor-pointer p-2 rounded-full"
+            className="cursor-pointer p-2 rounded-full disabled:opacity-30"
           >
-            <img src={closeIcon} className="w-6 h-6" />
+            <img src={closeIcon} className="w-6 h-6" alt="Close" />
           </button>
         </div>
 
-        {/* Form body */}
         <div className="overflow-y-auto text-white text-left px-16 py-4 space-y-6">
-
           <div className="form-group">
             <p className="pt-4 pb-1 text-lg font-semibold">Project Title</p>
             <input
@@ -127,7 +108,8 @@ const EditView = ({ projectData, onClose, onSaveProject }) => {
               name="title"
               value={formData.title}
               onChange={handleChange}
-              className="border-b-2 placeholder-gray-300 bg-transparent outline-none w-1/3"
+              disabled={isDeploying || hasContract}
+              className="border-b-2 placeholder-gray-300 bg-transparent outline-none w-1/3 disabled:opacity-50"
               placeholder="Project Title"
               required
             />
@@ -140,8 +122,9 @@ const EditView = ({ projectData, onClose, onSaveProject }) => {
               name="owner"
               value={formData.owner}
               onChange={handleChange}
-              className="border-b-2 placeholder-gray-300 bg-transparent outline-none w-1/3"
-              placeholder="Project Owner"
+              disabled={isDeploying || hasContract}
+              className="border-b-2 placeholder-gray-300 bg-transparent outline-none w-1/3 disabled:opacity-50"
+              placeholder="Project Owner Name"
               required
             />
           </div>
@@ -157,11 +140,13 @@ const EditView = ({ projectData, onClose, onSaveProject }) => {
                   min="0.000000000000000001"
                   value={formData.goal}
                   onChange={handleChange}
-                  className="bg-transparent py-1 outline-none placeholder-gray-300 flex-1"
+                  readOnly={hasContract}
+                  disabled={isDeploying}
+                  className={`bg-transparent py-1 outline-none placeholder-gray-300 flex-1 disabled:opacity-50 ${hasContract ? "text-gray-400 cursor-not-allowed" : ""}`}
                   placeholder="0.00"
                   required
                 />
-                <span className="ml-2 pb-1">ETH</span>
+                <span className={`ml-2 pb-1 ${hasContract ? "text-gray-400" : ""}`}>ETH</span>
               </div>
             </div>
 
@@ -173,8 +158,9 @@ const EditView = ({ projectData, onClose, onSaveProject }) => {
                 min={currentDate}
                 value={formData.deadline}
                 onChange={handleChange}
-                readOnly={!!formData.id}
-                className="placeholder-gray-300 bg-transparent outline-none"
+                readOnly={hasContract}
+                disabled={isDeploying}
+                className={`placeholder-gray-300 bg-transparent outline-none disabled:opacity-50 ${hasContract ? "text-gray-400 cursor-not-allowed" : ""}`}
                 required
               />
             </div>
@@ -188,37 +174,29 @@ const EditView = ({ projectData, onClose, onSaveProject }) => {
               rows="10"
               value={formData.description}
               onChange={handleChange}
-              className="border-2 placeholder-gray-300 w-full bg-transparent outline-none p-2"
+              disabled={isDeploying || hasContract}
+              className="border-2 placeholder-gray-300 w-full bg-transparent outline-none p-2 rounded-md focus:border-green-500 transition-colors disabled:opacity-50"
               placeholder="Project Description"
               required
             />
           </div>
 
-          {/* Contract address — shown when editing an already-deployed project */}
-          {formData.id && formData.contractAddress && (
-            <div className="form-group">
-              <p className="pt-2 pb-1 text-sm font-semibold text-gray-400">Contract Address</p>
-              <p className="text-xs font-mono text-gray-400 break-all">{formData.contractAddress}</p>
+          {hasContract && (
+            <div className="form-group bg-black/20 p-4 rounded-lg border border-gray-600/40">
+              <p className="pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400">Deployed Contract Address</p>
+              <p className="text-sm font-mono text-green-400 break-all select-all">{formData.contractAddress}</p>
             </div>
-          )}
-
-          {/* Deploy note for new projects */}
-          {!formData.id && (
-            <p className="text-xs text-gray-400">
-              Publishing will deploy a new EscrowContract to the blockchain via MetaMask.
-            </p>
           )}
         </div>
 
-        {/* Footer */}
         <div className="flex justify-start py-6 px-16 border-t border-gray-600">
           <button
-            className="bg-[#028858] text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-[#039260] disabled:opacity-60 disabled:cursor-not-allowed"
+            className="bg-[#028858] text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-[#039260] disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
             onClick={handlePublishClick}
             disabled={isDeploying}
           >
             {isDeploying
-              ? "Deploying contract…"
+              ? "Processing Transaction…"
               : formData.id
                 ? "Save Changes"
                 : "Publish Project"}

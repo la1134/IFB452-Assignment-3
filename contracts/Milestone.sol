@@ -28,14 +28,6 @@ contract MilestoneContract {
     event Refunded(uint256 indexed roundId, address indexed backer, uint256 amount);
 
     // ─── Constructor ───────────────────────────────────────────────────
-    /**
-     * @param _escrowAddress Address of the original EscrowContract
-     *
-     * Requirements:
-     *  - Caller must be the same creator who deployed the EscrowContract
-     *  - The EscrowContract deadline must have already passed
-     *  - The EscrowContract must have been successfully funded and withdrawn
-     */
     constructor(address _escrowAddress) {
         EscrowContract _escrow = EscrowContract(_escrowAddress);
 
@@ -69,16 +61,6 @@ contract MilestoneContract {
     }
 
     // ─── Create New Milestone Round ────────────────────────────────────
-    /**
-     * @notice Creator opens a new milestone funding round.
-     * @param _goal         Target amount in wei for this round
-     * @param _durationDays Number of days this round stays open
-     *
-     * Rules:
-     *  - Only creator can open a new round
-     *  - Previous round must be closed (withdrawn or deadline passed)
-     *    before a new round can be created
-     */
     function createRound(
         uint256 _goal,
         uint256 _durationDays
@@ -86,7 +68,6 @@ contract MilestoneContract {
         require(_goal > 0,         "Goal must be greater than zero");
         require(_durationDays > 0, "Duration must be at least 1 day");
 
-        // Previous round must be completed before opening a new one
         if (roundCount > 0) {
             MilestoneRound storage prev = rounds[roundCount];
             bool prevWithdrawn = prev.withdrawn;
@@ -108,10 +89,6 @@ contract MilestoneContract {
     }
 
     // ─── Contribute to a Round ─────────────────────────────────────────
-    /**
-     * @notice Backers contribute Ether to a specific milestone round.
-     * @param _roundId The round to contribute to
-     */
     function contribute(uint256 _roundId) external payable validRound(_roundId) {
         MilestoneRound storage round = rounds[_roundId];
 
@@ -126,10 +103,6 @@ contract MilestoneContract {
     }
 
     // ─── Get Round Balance ─────────────────────────────────────────────
-    /**
-     * @notice Returns total Ether contributed to a specific round.
-     * @param _roundId The round to check
-     */
     function getRoundBalance(uint256 _roundId)
         external
         view
@@ -140,10 +113,6 @@ contract MilestoneContract {
     }
 
     // ─── Get Round Info ────────────────────────────────────────────────
-    /**
-     * @notice Returns key details about a specific round.
-     * @param _roundId The round to query
-     */
     function getRoundInfo(uint256 _roundId)
         external
         view
@@ -169,16 +138,6 @@ contract MilestoneContract {
     }
 
     // ─── Withdraw Round Funds ──────────────────────────────────────────
-    /**
-     * @notice Creator withdraws funds from a completed round.
-     * @param _roundId The round to withdraw from
-     *
-     * Requirements:
-     *  - Caller is the creator
-     *  - Round goal has been reached
-     *  - Round has not already been withdrawn
-     *  - Original escrow was successfully funded
-     */
     function withdraw(uint256 _roundId)
         external
         onlyCreator
@@ -200,15 +159,6 @@ contract MilestoneContract {
     }
 
     // ─── Refund from a Round ───────────────────────────────────────────
-    /**
-     * @notice Backers reclaim their contribution from a failed round.
-     * @param _roundId The round to refund from
-     *
-     * Requirements:
-     *  - Round deadline has passed
-     *  - Round goal was NOT met
-     *  - Caller has a contribution balance above zero in that round
-     */
     function refund(uint256 _roundId)
         external
         validRound(_roundId)
@@ -220,7 +170,7 @@ contract MilestoneContract {
         require(round.contributions[msg.sender] > 0,       "No contribution to refund");
 
         uint256 amount = round.contributions[msg.sender];
-        round.contributions[msg.sender] = 0; // zero BEFORE transfer (re-entrancy guard)
+        round.contributions[msg.sender] = 0;
         round.totalContributed -= amount;
 
         (bool success, ) = payable(msg.sender).call{value: amount}("");
@@ -237,5 +187,18 @@ contract MilestoneContract {
         returns (uint256)
     {
         return rounds[_roundId].contributions[_backer];
+    }
+
+    // ─── Get Parent Escrow Text Content ────────────────────────
+    /**
+     * @notice Allows UI to fetch project identification metadata 
+     *         directly through the milestone contract instance via cross-contract calls.
+     */
+    function getParentProjectMetadata() external view returns (
+        string memory parentTitle,
+        string memory parentOwner,
+        string memory parentDescription
+    ) {
+        return (escrow.title(), escrow.ownerName(), escrow.description());
     }
 }

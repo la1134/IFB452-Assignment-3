@@ -4,14 +4,23 @@ async function main() {
   const [deployer] = await ethers.getSigners();
   console.log("Deploying MilestoneContract with account:", deployer.address);
 
-  // ── REPLACE THIS with your deployed EscrowContract address ─────────
-  const ESCROW_ADDRESS = "0xYourEscrowContractAddressHere";
+  // ── PASTE THE DYNAMIC ESCROW INSTANCE ADDRESS RETURNED BY YOUR FACTORY HERE ──
+  const ESCROW_ADDRESS = "0xYourEscrowInstanceAddressFromFactory";
 
-  // Example: milestone goal = 0.5 ETH, duration = 14 days
+  if (ESCROW_ADDRESS === "0xYourEscrowInstanceAddressFromFactory") {
+    console.error("\n❌ Error: Please update ESCROW_ADDRESS with a real address from your factory deployment first.");
+    process.exit(1);
+  }
+
+  // Example parameters for this specific milestone round
   const milestoneGoalWei = ethers.parseEther("0.5");
   const durationDays = 14;
 
   const MilestoneContract = await ethers.getContractFactory("MilestoneContract");
+  
+  console.log(`\n🚀 Deploying MilestoneContract linked to factory instance: ${ESCROW_ADDRESS}...`);
+  
+  // Deploying with the 3 required constructor arguments
   const milestone = await MilestoneContract.deploy(
     ESCROW_ADDRESS,
     milestoneGoalWei,
@@ -20,10 +29,12 @@ async function main() {
   await milestone.waitForDeployment();
 
   const milestoneAddress = await milestone.getAddress();
-  console.log("✅ MilestoneContract deployed to:", milestoneAddress);
-  console.log("   Milestone goal:", ethers.formatEther(milestoneGoalWei), "ETH");
-  console.log("   Duration:", durationDays, "days");
-  console.log("   Linked to Escrow:", ESCROW_ADDRESS);
+  console.log("\n✅ MilestoneContract deployed successfully!");
+  console.log("──────────────────────────────────────────────────");
+  console.log("Milestone Contract Address: ", milestoneAddress);
+  console.log("Linked Parent Escrow:        ", ESCROW_ADDRESS);
+  console.log("Milestone Target Goal:      ", ethers.formatEther(milestoneGoalWei), "ETH");
+  console.log("Milestone Timeline Grace:    ", durationDays, "days");
 }
 
 main().catch((error) => {

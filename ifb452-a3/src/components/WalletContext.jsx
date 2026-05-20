@@ -1,11 +1,15 @@
+import { ethers } from "ethers";
 import { createContext, useContext, useState, useEffect } from "react";
 import { connectWallet, onAccountChange, onNetworkChange } from "../web3";
 
 const WalletContext = createContext();
 
+const HARDHAT_RPC_URL = "http://127.0.0.1:8545";
+
 export function WalletProvider({ children }) {
   const [account, setAccount] = useState(null);
   const [authType, setAuthType] = useState(null); // "metamask" | "manual"
+  const [privateKey, setPrivateKey] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // ── Restore session on page load ──────────────────────────────────────
@@ -14,7 +18,6 @@ export function WalletProvider({ children }) {
     const savedAuthType = localStorage.getItem("wallet_authType");
 
     if (savedAuthType === "metamask" && window.ethereum) {
-      // Re-verify MetaMask still has the account connected
       window.ethereum
         .request({ method: "eth_accounts" })
         .then((accounts) => {
@@ -22,38 +25,53 @@ export function WalletProvider({ children }) {
             setAccount(accounts[0]);
             setAuthType("metamask");
           } else {
-            // MetaMask was disconnected externally — clear storage
             clearSession();
           }
-        });
+        })
+        .catch(() => clearSession());
     } else if (savedAuthType === "manual" && savedAccount) {
-      setAccount(savedAccount);
-      setAuthType("manual");
-    }
-
-    // Listen for MetaMask account switches
-    onAccountChange((accounts) => {
-      if (accounts.length > 0) {
-        setAccount(accounts[0]);
-        setAuthType("metamask");
-        localStorage.setItem("wallet_account",  accounts[0]);
-        localStorage.setItem("wallet_authType", "metamask");
+      // Look for key matching the address in session storage for security
+      const savedKey = sessionStorage.getItem("wallet_pk");
+      if (savedKey) {
+        setAccount(savedAccount);
+        setAuthType("manual");
+        setPrivateKey(savedKey);
       } else {
         clearSession();
       }
-    });
+    }
 
-    onNetworkChange(() => window.location.reload());
+    // Listen for MetaMask account switches
+    let removeAccountListener;
+    if (window.ethereum && onAccountChange) {
+      removeAccountListener = onAccountChange((accounts) => {
+        if (accounts.length > 0) {
+          setAccount(accounts[0]);
+          setAuthType("metamask");
+          localStorage.setItem("wallet_account",  accounts[0]);
+          localStorage.setItem("wallet_authType", "metamask");
+          sessionStorage.removeItem("wallet_pk"); // Flush explicit key if switching
+        } else {
+          clearSession();
+        }
+      });
+    }
+
+    if (window.ethereum && onNetworkChange) {
+      onNetworkChange(() => window.location.reload());
+    }
   }, []);
 
   function clearSession() {
     setAccount(null);
     setAuthType(null);
+    setPrivateKey(null);
     localStorage.removeItem("wallet_account");
     localStorage.removeItem("wallet_authType");
+    sessionStorage.removeItem("wallet_pk");
   }
 
-  // ── MetaMask ──────────────────────────────────────────────────────────
+  // MetaMask
   async function connect() {
     setIsLoading(true);
     try {
@@ -63,6 +81,7 @@ export function WalletProvider({ children }) {
       setAuthType("metamask");
       localStorage.setItem("wallet_account",  address);
       localStorage.setItem("wallet_authType", "metamask");
+      sessionStorage.removeItem("wallet_pk");
       return signer;
     } catch (err) {
       console.error("Wallet error:", err);
@@ -72,16 +91,45 @@ export function WalletProvider({ children }) {
     }
   }
 
-  // ── Manual ────────────────────────────────────────────────────────────
-  function loginManual(walletAddress, privateKey) {
-    if (!walletAddress || !privateKey) {
+  // Manual Hardhat Accounts
+  async function loginManual(walletAddress, inputPrivateKey) {
+    if (!walletAddress || !inputPrivateKey) {
       alert("Please fill in both fields.");
       return null;
     }
+
+    const formattedKey = inputPrivateKey.startsWith("0x") ? inputPrivateKey : `0x${inputPrivateKey}`;
+
+    try {
+      const derived = new ethers.Wallet(formattedKey);
+      if (derived.address.toLowerCase() !== walletAddress.toLowerCase()) {
+        alert("Private key does not match the wallet address.");
+        return null;
+      }
+    } catch {
+      alert("Invalid private key format.");
+      return null;
+    }
+
+    // Verify connection & active balance allocations
+    try {
+      const provider = new ethers.JsonRpcProvider(HARDHAT_RPC_URL);
+      const balance  = await provider.getBalance(walletAddress);
+      if (balance === 0n) {
+        alert("This wallet has no funds on the local network. Are you using an active Hardhat genesis account?");
+        return null;
+      }
+    } catch {
+      alert("Could not connect to local Hardhat node. Make sure your local node console terminal is running.");
+      return null;
+    }
+
     setAccount(walletAddress);
     setAuthType("manual");
+    setPrivateKey(formattedKey);
     localStorage.setItem("wallet_account",  walletAddress);
     localStorage.setItem("wallet_authType", "manual");
+    sessionStorage.setItem("wallet_pk", formattedKey);
     return walletAddress;
   }
 
@@ -89,9 +137,26 @@ export function WalletProvider({ children }) {
     clearSession();
   }
 
+  async function getSignerOrProvider() {
+    if (authType === "metamask" && window.ethereum) {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      return await provider.getSigner();
+    }
+    
+    if (authType === "manual" && privateKey) {
+      const provider = new ethers.JsonRpcProvider(HARDHAT_RPC_URL);
+      return new ethers.Wallet(privateKey, provider);
+    }
+    
+    if (window.ethereum) {
+      return new ethers.BrowserProvider(window.ethereum);
+    }
+    return new ethers.JsonRpcProvider(HARDHAT_RPC_URL);
+  }
+
   return (
     <WalletContext.Provider
-      value={{ account, authType, isLoading, connect, loginManual, logout }}
+      value={{ account, authType, isLoading, connect, loginManual, logout, getSignerOrProvider }}
     >
       {children}
     </WalletContext.Provider>

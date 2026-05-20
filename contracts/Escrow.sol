@@ -6,6 +6,11 @@ contract EscrowContract {
     address public creator;
     uint256 public fundingGoal;   // in wei
     uint256 public deadline;      // unix timestamp
+    
+    // On-chain metadata parameters
+    string public title;
+    string public ownerName;
+    string public description;
 
     mapping(address => uint256) public contributions; // backer address → amount contributed
     bool public withdrawn = false;
@@ -17,23 +22,35 @@ contract EscrowContract {
 
     // ─── Constructor ───────────────────────────────────────────────────
     /**
-     * @param _fundingGoal  Target amount in wei the project must reach
-     * @param _durationDays Number of days from deployment until deadline
+     * @param _fundingGoal    Target amount in wei the project must reach
+     * @param _deadline       The absolute Unix timestamp for the deadline
+     * @param _title          Project Title (Max 50 characters)
+     * @param _ownerName      Name of the Project Owner/Creator (Max 40 characters)
+     * @param _description    Short project pitch or overview (Max 280 characters)
      */
-    constructor(uint256 _fundingGoal, uint256 _durationDays) {
+    constructor(
+        uint256 _fundingGoal, 
+        uint256 _deadline,
+        string memory _title,
+        string memory _ownerName,
+        string memory _description,
+        address _creatorAddress
+    ) {
         require(_fundingGoal > 0, "Funding goal must be greater than zero");
-        require(_durationDays > 0, "Duration must be at least 1 day");
+        require(_deadline > block.timestamp, "Deadline must be in the future"); // Updated requirement
+        require(bytes(_title).length > 0 && bytes(_title).length <= 50, "Title must be 1-50 chars");
+        require(bytes(_ownerName).length > 0 && bytes(_ownerName).length <= 40, "Name must be 1-40 chars");
+        require(bytes(_description).length > 0 && bytes(_description).length <= 280, "Description must be 1-280 chars");
 
-        creator     = msg.sender;
+        creator     = _creatorAddress; 
         fundingGoal = _fundingGoal;
-        deadline    = block.timestamp + (_durationDays * 1 days);
+        deadline    = _deadline; // Assigned directly as an absolute timestamp now
+        title       = _title;
+        ownerName   = _ownerName;
+        description = _description;
     }
 
     // ─── Contribute ────────────────────────────────────────────────────
-    /**
-     * @notice Backers call this to send Ether to the project.
-     *         Records the contribution linked to their address.
-     */
     function contribute() external payable {
         require(block.timestamp < deadline,  "Funding deadline has passed");
         require(msg.value > 0,               "Contribution must be greater than zero");
@@ -44,21 +61,14 @@ contract EscrowContract {
     }
 
     // ─── Contract Balance ──────────────────────────────────────────────
-    /**
-     * @notice Returns the total Ether currently held by this contract.
-     *         Anyone can call this to check funding progress.
-     */
     function getBalance() external view returns (uint256) {
         return address(this).balance;
     }
 
     // ─── Withdraw ──────────────────────────────────────────────────────
-    /**
-     * @notice Creator withdraws all funds if the funding goal was met.
-     *         Only callable by the creator, and only if goal is reached.
-     */
     function withdraw() external {
         require(msg.sender == creator,                  "Only the creator can withdraw");
+        require(block.timestamp >= deadline,          "Deadline has not passed yet");
         require(address(this).balance >= fundingGoal,   "Funding goal not reached");
         require(!withdrawn,                             "Funds already withdrawn");
 
@@ -72,19 +82,13 @@ contract EscrowContract {
     }
 
     // ─── Refund ────────────────────────────────────────────────────────
-    /**
-     * @notice Backers call this to reclaim their contribution if:
-     *         - The deadline has passed
-     *         - The funding goal was NOT met
-     *         - They have a contribution balance above zero
-     */
     function refund() external {
         require(block.timestamp >= deadline,            "Deadline has not passed yet");
         require(address(this).balance < fundingGoal,    "Funding goal was met - no refunds");
         require(contributions[msg.sender] > 0,          "No contribution to refund");
 
         uint256 amount = contributions[msg.sender];
-        contributions[msg.sender] = 0; // set to zero BEFORE transfer (re-entrancy guard)
+        contributions[msg.sender] = 0; // Re-entrancy guard
 
         (bool success, ) = payable(msg.sender).call{value: amount}("");
         require(success, "Refund transfer failed");
@@ -101,5 +105,18 @@ contract EscrowContract {
     function timeRemaining() external view returns (uint256) {
         if (block.timestamp >= deadline) return 0;
         return deadline - block.timestamp;
+    }
+
+    // ─── Get Full Project Information ──────────────────────────
+    function getProjectDetails() external view returns (
+        string memory _title,
+        string memory _ownerName,
+        string memory _description,
+        uint256 _fundingGoal,
+        uint256 _deadline,
+        uint256 _balance,
+        address _creator
+    ) {
+        return (title, ownerName, description, fundingGoal, deadline, address(this).balance, creator);
     }
 }

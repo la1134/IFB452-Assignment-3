@@ -1,3 +1,4 @@
+// Loading spinner elemenet shown during grid loading
 const LoadingSpinner = () => {
   return (
     <div className="w-full flex items-center justify-center bg-transparent z-10">

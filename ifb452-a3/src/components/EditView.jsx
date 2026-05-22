@@ -1,12 +1,12 @@
 import { useState } from "react";
-import closeIcon from "../assets/close.svg";
 import { useWallet } from "./WalletContext";
+import closeIcon from "../assets/close.svg";
 
 const EditView = ({ projectData, onClose, onSaveProject }) => {
   const { account } = useWallet();
   const currentDate = new Date().toISOString().split("T")[0];
 
-  // default Form Data
+  // Default Form Data
   const [formData, setFormData] = useState({
     id:              projectData?.id              ?? null,
     title:           projectData?.title           ?? "",
@@ -45,10 +45,10 @@ const EditView = ({ projectData, onClose, onSaveProject }) => {
     const parts = formData.deadline.split("-");
     const targetDeadlineDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
     
-    // Set deadline to the precise end of that selected calendar day (23:59:59)
+    // Set deadline to the precise end of calendar day
     targetDeadlineDate.setHours(23, 59, 59, 999);
 
-    // Compute absolute Unix timestamp representation (seconds instead of milliseconds)
+    // Compute absolute Unix timestamp representation
     const deadlineTimestamp = Math.floor(targetDeadlineDate.getTime() / 1000);
     const currentUnixTime = Math.floor(Date.now() / 1000);
 
@@ -57,7 +57,7 @@ const EditView = ({ projectData, onClose, onSaveProject }) => {
       return;
     }
 
-    // Validation Guardrails
+    // Validation checks
     const cleanTitle = String(formData.title).trim();
     const cleanOwner = String(formData.owner).trim();
     const cleanDesc  = String(formData.description).trim();

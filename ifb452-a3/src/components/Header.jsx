@@ -1,9 +1,9 @@
 import { useState } from "react";
+import { useWallet } from "./WalletContext";
 import LoginView from "./LoginView";
 import searchIcon from "../assets/search.svg";
 import loginIcon from "../assets/login.svg";
 import logoutIcon from "../assets/logout.svg";
-import { useWallet } from "./WalletContext";
 
 function Header({ onSearch }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -76,7 +76,7 @@ function Header({ onSearch }) {
         </div>
       </div>
 
-      {/* Login Modal */}
+      {/* Login popup */}
       {isLoginOpen && (
         <LoginView
           onClose={() => setIsLoginOpen(false)}

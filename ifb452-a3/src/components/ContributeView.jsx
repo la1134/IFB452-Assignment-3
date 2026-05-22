@@ -1,14 +1,12 @@
 import { useState } from "react";
-import closeIcon from "../assets/close.svg";
 import { useWallet } from "./WalletContext";
+import closeIcon from "../assets/close.svg";
 
 const ContributeView = ({ projectData, onClose, onContribute }) => {
   const [amount, setAmount] = useState("");
   const [isSending, setIsSending] = useState(false);
 
-  const hasContract = !!projectData.contractAddress;
-
-  // Use onContribute parent function to send ETH from backer
+  // Uses onContribute parent function to send ETH from backer
   const handleConfirm = async () => {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
@@ -35,12 +33,6 @@ const ContributeView = ({ projectData, onClose, onContribute }) => {
         <p className="mb-4 text-gray-300">
           Support <span className="font-semibold text-white">{projectData.title}</span>
         </p>
-
-        {!hasContract && (
-          <div className="bg-yellow-900/40 border border-yellow-600/50 rounded-lg px-4 py-2 mb-4 text-yellow-300 text-xs">
-            ⚠ No contract deployed — contribution will only update the local database.
-          </div>
-        )}
 
         <div className="space-y-4">
           <div className="form-group">

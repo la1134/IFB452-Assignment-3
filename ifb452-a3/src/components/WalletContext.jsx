@@ -8,11 +8,11 @@ const HARDHAT_RPC_URL = "http://127.0.0.1:8545";
 
 export function WalletProvider({ children }) {
   const [account, setAccount] = useState(null);
-  const [authType, setAuthType] = useState(null); // "metamask" | "manual"
+  const [authType, setAuthType] = useState(null); // valueas are "metamask" or "manual"
   const [privateKey, setPrivateKey] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // ── Restore session on page load ──────────────────────────────────────
+  // Restore session on page load
   useEffect(() => {
     const savedAccount  = localStorage.getItem("wallet_account");
     const savedAuthType = localStorage.getItem("wallet_authType");

@@ -1,12 +1,14 @@
 import { ethers } from "ethers";
 import { useState, useEffect } from "react";
-import closeIcon from "../assets/close.svg";
-import timeIcon from "../assets/time.svg";
 import { useWallet } from "./WalletContext";
 import { ESCROW_ABI } from "../contracts/EscrowContract";
+import closeIcon from "../assets/close.svg";
+import timeIcon from "../assets/time.svg";
 import MilestoneView from "./MilestoneView";
 
-const ProjectView = ({ projectData, onClose, onEdit, onDelete, onBackClick, onDeployMilestone, onMilestoneContribute, milestoneAddress }) => {
+const ProjectView = ({ projectData, onClose, onEdit, onBackClick, onDeployMilestone, onMilestoneContribute, milestoneAddress }) => {
+
+  // Default project variables, useState for dynamic rendering
   const { account, getSignerOrProvider } = useWallet();
   const [myContribution, setMyContribution]         = useState(0n);
   const [secondsLeftOnChain, setSecondsLeftOnChain] = useState(null);
@@ -26,11 +28,12 @@ const ProjectView = ({ projectData, onClose, onEdit, onDelete, onBackClick, onDe
     ? Math.ceil(secondsLeftOnChain / (24 * 60 * 60))
     : projectData.daysLeft;
 
-  // Use on-chain goalWasMet flag so it persists after withdrawal drains balance
+  // Uses goalWasMet for persiststance after withdrawal drains balance
   const goalMet = goalWasMet || projectData.balance >= projectData.goal;
 
   const hasMilestone = !!milestoneAddress;
 
+  // Get data from Escrow contracts using ethers
   useEffect(() => {
     if (!hasContract || !window.ethereum) return;
 
@@ -58,6 +61,7 @@ const ProjectView = ({ projectData, onClose, onEdit, onDelete, onBackClick, onDe
     fetchContractState();
   }, [account, projectData.contractAddress, hasContract]);
 
+  // Determining stakeholder roles
   const isCreator =
     account &&
     projectData.creatorAddress &&
@@ -76,6 +80,7 @@ const ProjectView = ({ projectData, onClose, onEdit, onDelete, onBackClick, onDe
     onBackClick();
   };
 
+  // Calls refund function from Escrow contract
   const handleRefund = async () => {
     setIsSubmitting(true);
     try {
@@ -89,6 +94,7 @@ const ProjectView = ({ projectData, onClose, onEdit, onDelete, onBackClick, onDe
     } finally { setIsSubmitting(false); }
   };
 
+  // Same for withdrawal
   const handleWithdraw = async () => {
     setIsSubmitting(true);
     try {
@@ -97,7 +103,7 @@ const ProjectView = ({ projectData, onClose, onEdit, onDelete, onBackClick, onDe
       await tx.wait();
       alert("Withdrawal successful!");
       setIsWithdrawnOnChain(true);
-      setGoalWasMet(true); // reflect immediately without refetch
+      setGoalWasMet(true); // reflects immediately without refresh
     } catch (err) {
       alert("Withdrawal failed: " + (err.reason ?? err.message));
     } finally { setIsSubmitting(false); }
@@ -110,13 +116,6 @@ const ProjectView = ({ projectData, onClose, onEdit, onDelete, onBackClick, onDe
     } catch (err) {
       alert("Milestone deployment failed: " + (err.reason ?? err.message));
     } finally { setIsSubmitting(false); }
-  };
-
-  const handleDelete = () => {
-    if (window.confirm(`Delete "${projectData.title}"? This cannot be undone.`)) {
-      onDelete(projectData.id);
-      onClose();
-    }
   };
 
   return (

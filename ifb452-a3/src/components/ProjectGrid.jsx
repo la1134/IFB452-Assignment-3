@@ -1,4 +1,7 @@
+import { ethers } from "ethers";
 import { useState, useEffect } from 'react';
+import { useWallet } from './WalletContext';
+import { ESCROW_ABI } from '../contracts/EscrowContract';
 import ProjectView from './ProjectView';
 import EditView from './EditView';
 import LoginView from './LoginView';
@@ -6,13 +9,11 @@ import timeIcon from "../assets/time.svg";
 import plusIcon from "../assets/plus.svg";
 import LoadingSpinner from './LoadingSpinner';
 import ContributeView from './ContributeView';
-import { useWallet } from './WalletContext';
-import { ethers } from "ethers";
-import { ESCROW_ABI } from '../contracts/EscrowContract';
 
-const ProjectGrid = ({ connectionsData, onSaveProject, onDeployMilestone, milestoneAddresses, onContribute, onMilestoneContribute, onDelete, isLoading }) => {
+const ProjectGrid = ({ connectionsData, onSaveProject, onDeployMilestone, milestoneAddresses, onContribute, onMilestoneContribute, isLoading }) => {
   const { account } = useWallet();
 
+  // Default grid data, useState for dynamic rendering
   const [projectData,         setProjectData]         = useState(null);
   const [showProfilePopup,   setShowProfilePopup]   = useState(false);
   const [showEditPopup,      setShowEditPopup]       = useState(false);
@@ -23,6 +24,7 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onDeployMilestone, milest
   const [activeTab, setActiveTab] = useState("all");
   const [chainTimes, setChainTimes] = useState({});
 
+  // Fetch remaining time for display from Escrow contract's timeRemaining function
   useEffect(() => {
     const fetchAllTimes = async () => {
       if (!window.ethereum) return;
@@ -48,7 +50,7 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onDeployMilestone, milest
     fetchAllTimes();
   }, [connectionsData]);
   
-  // Tab Filtering
+  // Filtering Tabs
   const filteredProjects = connectionsData.filter((project) => {
     if (!project) return false;
     
@@ -65,6 +67,7 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onDeployMilestone, milest
     return true;
   });
 
+  // Opening/closing the various popups
   const handleViewProject = (project) => {
     setProjectData(project);
     setShowProfilePopup(true);
@@ -173,7 +176,7 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onDeployMilestone, milest
 
                           <div className="flex items-center gap-x-2 flex-1">
                             {hasMilestone ? (
-                              // Show "Funded" badge when Milestone contract is active
+                              // Show "Funded" when Milestone contract is active
                               <div className="w-full flex items-center justify-center bg-green-900/40 border border-green-600/50 rounded-lg py-1">
                                 <span className="text-green-300 text-sm font-bold">Funded</span>
                               </div>
@@ -211,7 +214,6 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onDeployMilestone, milest
             handleEditProject(project);
             handleCloseProfile();
           }}
-          onDelete={onDelete}
           onBackClick={handleOpenContribute}
           onMilestoneContribute={onMilestoneContribute}
           onDeployMilestone={onDeployMilestone}

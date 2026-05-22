@@ -1,6 +1,6 @@
 import { useState } from "react";
-import closeIcon from "../assets/close.svg";
 import { useWallet } from "./WalletContext";
+import closeIcon from "../assets/close.svg";
 
 const LoginView = ({ onClose, onSuccess }) => {
   const { connect, loginManual } = useWallet();
@@ -79,7 +79,7 @@ const LoginView = ({ onClose, onSuccess }) => {
           <div className="grow border-t border-gray-500"></div>
         </div>
 
-        {/* Hardhat / Local Node Credentials Form */}
+        {/* Manual Login Form */}
         <form onSubmit={handleManual} className="space-y-5">
           <div className="form-group">
             <label className="block text-sm font-medium mb-1 text-gray-300">Wallet Address</label>

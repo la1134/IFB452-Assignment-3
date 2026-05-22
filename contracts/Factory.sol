@@ -47,7 +47,7 @@ contract EscrowFactory {
 }
 
 contract MilestoneFactory {
-    mapping(address => address) public escrowToMilestone; // escrow → milestone
+    mapping(address => address) public escrowToMilestone;
     address[] public allMilestones;
 
     event MilestoneCreated(address indexed milestoneAddress, address indexed escrowAddress, address indexed creator);

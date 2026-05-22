@@ -1,8 +1,8 @@
 import { ethers } from "ethers";
 import { useState, useEffect } from "react";
-import closeIcon from "../assets/close.svg";
 import { useWallet } from "./WalletContext";
 import { MILESTONE_ABI } from "../contracts/MilestoneContract";
+import closeIcon from "../assets/close.svg";
 
 const MilestoneView = ({ projectData, milestoneAddress, onMilestoneContribute, isCreator, onClose }) => {
   const { account, getSignerOrProvider } = useWallet();
@@ -10,11 +10,11 @@ const MilestoneView = ({ projectData, milestoneAddress, onMilestoneContribute, i
   const [isLoading, setIsLoading]       = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Create round form
+  // Round form
   const [newGoal, setNewGoal]         = useState("");
   const [newDuration, setNewDuration] = useState("");
 
-  // Contribute form — tracks which round and how much
+  // Contribute form
   const [contributeRoundId, setContributeRoundId] = useState(null);
   const [contributeAmount, setContributeAmount]   = useState("");
 
@@ -24,6 +24,7 @@ const MilestoneView = ({ projectData, milestoneAddress, onMilestoneContribute, i
     return new ethers.Contract(milestoneAddress, MILESTONE_ABI, withSigner ? client : client);
   }
 
+  // Fetches round details
   const fetchRounds = async () => {
     setIsLoading(true);
     try {
@@ -57,6 +58,7 @@ const MilestoneView = ({ projectData, milestoneAddress, onMilestoneContribute, i
 
   useEffect(() => { fetchRounds(); }, [milestoneAddress, account]);
 
+  // Call createRound from Milestone contract (through Factory)
   const handleCreateRound = async () => {
     if (!newGoal || !newDuration) { alert("Please fill in goal and duration."); return; }
     setIsSubmitting(true);
@@ -73,6 +75,7 @@ const MilestoneView = ({ projectData, milestoneAddress, onMilestoneContribute, i
     } finally { setIsSubmitting(false); }
   };
 
+  // Call parent onMilestoneContribute function from App.jsx
   const handleContribute = async (roundId) => {
     if (!contributeAmount || Number(contributeAmount) <= 0) return;
     
@@ -88,6 +91,7 @@ const MilestoneView = ({ projectData, milestoneAddress, onMilestoneContribute, i
     setIsSubmitting(false);
   };
 
+  // Call withdraw from Milestone contract
   const handleWithdraw = async (roundId) => {
     setIsSubmitting(true);
     try {
@@ -102,6 +106,7 @@ const MilestoneView = ({ projectData, milestoneAddress, onMilestoneContribute, i
     } finally { setIsSubmitting(false); }
   };
 
+  // Same for refund
   const handleRefund = async (roundId) => {
     setIsSubmitting(true);
     try {
@@ -129,7 +134,7 @@ const MilestoneView = ({ projectData, milestoneAddress, onMilestoneContribute, i
 
         <div className="overflow-y-auto p-6 space-y-4">
 
-          {/* Creator: create new round */}
+          {/* Only creators can create new round */}
           {isCreator && (
             <div className="bg-black/20 border border-gray-600/40 rounded-lg p-4 space-y-3">
               <p className="text-white font-semibold">Create New Round</p>
@@ -158,7 +163,7 @@ const MilestoneView = ({ projectData, milestoneAddress, onMilestoneContribute, i
               <button
                 onClick={handleCreateRound}
                 disabled={isSubmitting}
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 text-sm"
+                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 hover:cursor-pointer transition-colors disabled:opacity-50 text-sm"
               >
                 {isSubmitting ? "Processing..." : "Create Round"}
               </button>
@@ -207,7 +212,7 @@ const MilestoneView = ({ projectData, milestoneAddress, onMilestoneContribute, i
                     <p className="text-green-400 text-xs pb-6">Your contribution: {ethers.formatEther(round.myContribution)} ETH</p>
                   )}
 
-                  {/* Contribute inline form */}
+                  {/* Contribute form */}
                   {canContribute && (
                     contributeRoundId === round.id ? (
                       <div className="flex gap-x-2 items-center">
@@ -219,17 +224,17 @@ const MilestoneView = ({ projectData, milestoneAddress, onMilestoneContribute, i
                           className="flex-1 bg-transparent border-b border-gray-500 text-white outline-none py-1 placeholder-gray-500 text-sm"
                         />
                         <button onClick={() => handleContribute(round.id)} disabled={isSubmitting}
-                          className="bg-[#028858] text-white px-3 py-1 rounded-lg text-sm hover:bg-[#039260] disabled:opacity-50">
+                          className="bg-[#028858] text-white px-3 py-1 rounded-lg text-sm hover:bg-[#039260] hover:cursor-pointer disabled:opacity-50">
                           {isSubmitting ? "..." : "Confirm"}
                         </button>
                         <button onClick={() => { setContributeRoundId(null); setContributeAmount(""); }}
-                          className="text-gray-400 text-sm hover:text-white px-2">
+                          className="text-gray-400 text-sm hover:text-white px-2 hover:cursor-pointer">
                           Cancel
                         </button>
                       </div>
                     ) : (
                       <button onClick={() => setContributeRoundId(round.id)} disabled={isSubmitting}
-                        className="bg-[#028858] text-white px-4 py-1.5 rounded-lg text-sm hover:bg-[#039260] transition-colors disabled:opacity-50">
+                        className="bg-[#028858] text-white px-4 py-1.5 rounded-lg text-sm hover:bg-[#039260] hover:cursor-pointer transition-colors disabled:opacity-50">
                         Fund this Round
                       </button>
                     )
@@ -244,7 +249,7 @@ const MilestoneView = ({ projectData, milestoneAddress, onMilestoneContribute, i
 
                   {canRefund && (
                     <button onClick={() => handleRefund(round.id)} disabled={isSubmitting}
-                      className="bg-red-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-red-700 transition-colors disabled:opacity-50">
+                      className="bg-red-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-red-700 transition-colors hover:cursor-pointer disabled:opacity-50">
                       {isSubmitting ? "Processing..." : "Claim Refund"}
                     </button>
                   )}

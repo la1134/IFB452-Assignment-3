@@ -122,7 +122,7 @@ const MilestoneView = ({ projectData, milestoneAddress, onMilestoneContribute, i
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-60">
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black bg-opacity-60">
       <div className="bg-[#43444d] rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
 
         <div className="flex justify-between items-center p-4 border-b border-gray-600">

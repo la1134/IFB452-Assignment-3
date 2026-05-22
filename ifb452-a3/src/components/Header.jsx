@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { ethers } from "ethers";
+import { useState, useEffect } from "react";
 import { useWallet } from "./WalletContext";
 import LoginView from "./LoginView";
 import searchIcon from "../assets/search.svg";
@@ -8,7 +9,28 @@ import logoutIcon from "../assets/logout.svg";
 function Header({ onSearch }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const { account, authType, logout } = useWallet();
+  const [balance, setBalance] = useState(null);
+  const { account, authType, logout, getSignerOrProvider } = useWallet();
+
+  // Fetch user's account balance
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (account) {
+        try {
+          const providerOrSigner = await getSignerOrProvider();
+          const provider = providerOrSigner.provider || providerOrSigner;
+          const rawBalance = await provider.getBalance(account);
+          setBalance(ethers.formatEther(rawBalance)); // Format from Wei to ETH
+        } catch (error) {
+          console.error("Failed to fetch balance:", error);
+        }
+      } else {
+        setBalance(null);
+      }
+    };
+
+    fetchBalance();
+  }, [account, getSignerOrProvider]);
 
   const handleChange = (e) => {
     setSearchQuery(e.target.value);
@@ -26,10 +48,15 @@ function Header({ onSearch }) {
   return (
     <section className="p-4">
 
-      {/* Account name */}
+      {/* Account name and balance */}
       {account && (
-        <div className="absolute top-8 right-44 bg-gray-700 text-gray-200 text-sm px-3 py-2 rounded-lg font-mono">
-          {account.slice(0, 6)}...{account.slice(-4)}
+        <div className="absolute top-8 right-44 flex gap-4 items-center">
+          <span className="bg-gray-800 text-green-400 px-3 py-2 rounded-lg text-sm font-mono">
+            ETH {balance ? parseFloat(balance).toFixed(4) : "0.0000"}
+          </span>
+          <div className="bg-gray-700 text-gray-200 text-sm px-3 py-2 rounded-lg font-mono">
+            {account.slice(0, 6)}...{account.slice(-4)}
+          </div>
         </div>
       )}
 

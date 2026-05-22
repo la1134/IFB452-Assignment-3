@@ -107,7 +107,7 @@ export function WalletProvider({ children }) {
         return null;
       }
     } catch {
-      alert("Invalid private key format.");
+      alert("Invalid login.");
       return null;
     }
 

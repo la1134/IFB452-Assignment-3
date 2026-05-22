@@ -148,10 +148,10 @@ const ProjectView = ({ projectData, onClose, onEdit, onBackClick, onDeployMilest
             )}
 
             {/* Stats row */}
-            <div className="flex justify-start gap-x-20">
+            <div className="flex justify-start gap-x-4 xl:gap-x-20">
               <div className="flex items-center gap-x-1">
                 <img src={timeIcon} className="w-8 h-8 pt-1 opacity-80" />
-                <p className="text-xl text-gray-100">
+                <p className="min-w-30 text-md xl:text-xl text-gray-100">
                   {deadlinePassed ? "Expired" : `${displayDaysLeft.toLocaleString()} days left`}
                 </p>
               </div>
@@ -165,13 +165,13 @@ const ProjectView = ({ projectData, onClose, onEdit, onBackClick, onDeployMilest
                 ) : (
                   // Existing progress bar display
                   <>
-                    <div className="min-w-75 w-full h-4 bg-white/20 rounded-full overflow-hidden mt-1">
+                    <div className="min-w-20 sm:min-w-50 md:min-w-75 w-full h-4 bg-white/20 rounded-full overflow-hidden mt-1">
                       <div
                         className="h-full bg-green-500 transition-all duration-500 ease-out"
                         style={{ width: `${barWidth}%` }}
                       />
                     </div>
-                    <p className="min-w-100 text-xl text-gray-100">
+                    <p className="min-w-100 text-md xl:text-xl text-gray-100">
                       {projectData.balance?.toLocaleString()}/{projectData.goal?.toLocaleString()} ETH — ({projectData.percentageFunded?.toLocaleString()}% funded)
                     </p>
                   </>

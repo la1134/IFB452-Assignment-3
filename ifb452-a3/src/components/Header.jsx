@@ -48,34 +48,34 @@ function Header({ onSearch }) {
   return (
     <section className="p-4">
 
-      {/* Account name and balance */}
-      {account && (
-        <div className="absolute top-8 right-44 flex gap-4 items-center">
-          <span className="bg-gray-800 text-green-400 px-3 py-2 rounded-lg text-sm font-mono">
-            ETH {balance ? parseFloat(balance).toFixed(4) : "0.0000"}
-          </span>
-          <div className="bg-gray-700 text-gray-200 text-sm px-3 py-2 rounded-lg font-mono">
-            {account.slice(0, 6)}...{account.slice(-4)}
+      <div className="flex flex-col xl:flex-row">
+        {/* Account name and balance */}
+        {account && (
+          <div className="absolute top-24 right-10 xl:top-8 xl:right-44 flex flex-col xl:flex-row gap-2 items-center">
+            <span className="bg-gray-800 text-green-400 px-3 py-2 rounded-lg text-sm font-mono">
+              ETH {balance ? parseFloat(balance).toFixed(4) : "0.0000"}
+            </span>
+            <div className="bg-gray-700 text-gray-200 text-sm px-3 py-2 rounded-lg font-mono">
+              {account.slice(0, 6)}...{account.slice(-4)}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Login Button */}
-      <div className="absolute top-8 right-10">
-        <button
-          className={`flex items-center gap-2 text-white px-4 py-2 rounded-lg cursor-pointer ${
-            account ? "bg-red-600" : "bg-blue-600"
-          }`}
-          onClick={handleAuthAction}
-        >
-          <img
-            src={account ? logoutIcon : loginIcon}
-            className="w-5 h-5"
-          />
-          <span>
-            {account ? "Logout" : "Login"}
-          </span>
-        </button>
+        {/* Login Button */}
+        <div className="absolute top-8 right-10">
+          <button
+            className={`flex items-center gap-2 text-white px-4 py-2 rounded-lg cursor-pointer ${
+              account ? "bg-red-600" : "bg-blue-600"
+            }`}
+            onClick={handleAuthAction}
+          >
+            <img
+              src={account ? logoutIcon : loginIcon}
+              className="w-5 h-5"
+            />
+            <span>{account ? "Logout" : "Login"}</span>
+          </button>
+        </div>
       </div>
 
       <h1 className="pt-6 pb-12 text-6xl font-medium text-white">

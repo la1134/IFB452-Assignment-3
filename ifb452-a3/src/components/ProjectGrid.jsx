@@ -154,8 +154,13 @@ const ProjectGrid = ({ connectionsData, onSaveProject, onDeployMilestone, milest
                 <div key={project.id} className="flex flex-col items-center m-2">
                   <a
                     onClick={() => handleViewProject(project)}
-                    className="cursor-pointer bg-[#43444d] sm:w-100 md:w-67.5 lg:w-93.75 xl:w-78.75 2xl:w-100 h-full rounded-lg shadow-xl"
-                  >
+                    className="cursor-pointer bg-[#43444d] rounded-lg shadow-xl h-full 
+                        w-[70vw] 
+                        sm:w-100
+                        md:w-[clamp(280px,37.5vw,400px)] 
+                        lg:w-[clamp(350px,37.5vw,600px)] 
+                        xl:w-[clamp(300px,25vw,700px)] 
+                        2xl:w-[clamp(350px,22.5vw,800px)]">
                     <img
                       src={project.banner}
                       alt="Profile Banner"

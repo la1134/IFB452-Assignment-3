@@ -175,7 +175,7 @@ const EditView = ({ projectData, onClose, onSaveProject }) => {
               value={formData.description}
               onChange={handleChange}
               disabled={isDeploying || hasContract}
-              className="border-2 placeholder-gray-300 w-full bg-transparent outline-none p-2 rounded-md focus:border-green-500 transition-colors disabled:opacity-50"
+              className="border-2 placeholder-gray-300 w-full bg-transparent outline-none p-2 rounded-md transition-colors disabled:opacity-50"
               placeholder="Project Description"
               required
             />

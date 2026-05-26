@@ -1,98 +1,191 @@
-# IFB452 Assignment 3
+# Ethstarter
 
-## Blockchain Project Specification (2026)
+A decentralised crowdfunding platform built on Ethereum. Project creators launch campaigns backed by smart contracts — funds are held in escrow and only released when goals are met, giving backers trustless protection.
 
-This repository contains the specification summary for the IFB452 blockchain project assessment.
+https://github.com/la1134/IFB452-Assignment-3
+---
 
-## At a Glance
+## Features
 
-| Item | Details |
-| --- | --- |
-| Total weighting | 60% of unit grade |
-| Components | Progress presentation (15%) + Final demo (45%) |
-| Team size | 2 students per group |
-| Tech focus | Solidity smart contracts on Ethereum |
-| Extension | Not eligible for 48-hour extension |
+- **Create & manage projects** — launch campaigns with a funding goal and deadline
+- **Contribute with ETH** — back projects directly from your MetaMask wallet
+- **Escrow-protected funds** — contributions are locked in a smart contract until the goal is reached
+- **Automatic refunds** — backers can claim a refund if the deadline passes without the goal being met
+- **Milestone funding rounds** — creators can open sequential funding rounds via the Milestone contract
+- **Wallet authentication** — connect via MetaMask or log in manually with a wallet address and private key
+- **Project search** — filter the project grid by title in real time
 
-## Important Dates
+---
 
-| Milestone | Week | Date Window | Due |
-| --- | --- | --- | --- |
-| Progress presentation | Week 11 | May 11-15, 2026 | Slides due May 15, 2026, 11:59 PM |
-| Final presentation/demo | Week 13 | May 25-29, 2026 | Project video due May 29, 2026, 11:59 PM |
+## Tech Stack
 
-## Assessment Components
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, Vite, Tailwind CSS |
+| Routing | React Router v6 |
+| Blockchain | Ethereum (ethers.js v6) |
+| Wallet | MetaMask (EIP-1193) |
+| Smart Contracts | Solidity — Escrow & Milestone contracts |
+| Local data | JSON Server (REST mock API on port 3001) |
 
-### 1. Progress Presentation (15%)
+---
 
-- 8-minute in-person presentation in scheduled practical sessions (week 11).
-- Purpose: demonstrate progress and receive formative feedback.
-- Deliverable: slide deck (PowerPoint, PDF, or similar visual aid).
+## Project Structure
 
-### 2. Final Demo (45%)
+```
+src/
+├── components/
+│   ├── ContributeView.jsx   # Contribution modal
+│   ├── EditView.jsx         # Create / edit project form
+│   ├── Header.jsx           # Search bar and wallet auth
+│   ├── Layout.jsx           # App shell with Header + Outlet
+│   ├── LoadingSpinner.jsx   # Shared loading indicator
+│   ├── LoginView.jsx        # MetaMask / manual login modal
+│   ├── ProjectGrid.jsx      # Main project listing grid
+│   ├── ProjectView.jsx      # Project detail modal
+│   └── WalletContext.jsx    # Global wallet state (React Context)
+├── contracts/
+│   ├── EscrowContract.js    # Escrow ABI + deployed address
+│   └── MilestoneContract.js # Milestone ABI + deployed address
+├── web3.js                  # ethers.js helpers (connect, provider, listeners)
+├── App.jsx                  # Route definitions and global handlers
+└── main.jsx                 # App entry point
+```
 
-- Hackathon-style in-lab demonstration during scheduled tutorial sessions (week 13).
-- Assessors evaluate both project functionality and your understanding through oral questions.
-- No slide deck required for the final demo.
+---
 
-## Project Requirements
+## Getting Started
 
-Build a blockchain application in Solidity that demonstrates both technical quality and design comprehension.
+### Prerequisites
 
-### Technical Requirements
+- [Node.js](https://nodejs.org/) v18+
+- [MetaMask](https://metamask.io/) browser extension
+- A local Ethereum node or testnet RPC (e.g. Hardhat, Anvil, or Sepolia)
 
-1. Fit for purpose
-- Justify why blockchain is required for your selected application.
-- Show that the application needs state storage, multiple writers, and no permanently trusted third party.
-- Explain why smart contracts are necessary (not optional).
-- Discuss feasibility and scale-up potential.
+### Installation
 
-2. Smart contract architecture
-- Include at least 2 smart contracts in a multi-stakeholder application.
-- Demonstrate multiple stakeholder interactions with each contract.
-- Contract-to-contract interaction is encouraged.
-- Include an architecture diagram showing component interactions.
+```bash
+# 1. Clone the repository
+git clone https://github.com/your-username/ethstarter.git
+cd ethstarter
 
-3. Business process modelling (BPMN)
-- Provide BPMN orchestration and collaboration views.
-- Model business-level activities before, during, and after smart contract execution.
-- Link stakeholder activities where cross-stakeholder smart contract interactions occur.
-- Use BPMN for communication and context, not execution-level script details.
-- Signavio may be used to prepare process models.
+# 2. Install dependencies
+npm install
 
-4. Comprehension
-- Be able to clearly explain code, architecture, business process, and design decisions.
+# 3. Start the mock REST API (projects database)
+npx json-server --watch db.json --port 3001
 
-## Progress Presentation Slide Plan (7 Slides)
+# 4. Start the development server
+npm run dev
+```
 
-1. Title slide: group number, student names, student numbers.
-2. Project overview: what, how, and why it matters.
-3. Smart contracts and stakeholders: contracts, participants, and roles.
-4. Smart contract interactions: stakeholder-to-contract and contract-to-contract flows.
-5. BPMN specification: business-level process before/during/after contract execution.
-6. Design considerations: key decisions, constraints, and risk handling.
-7. Methodology: implementation approach and execution steps.
+The app will be available at `http://localhost:5173`.
 
-## Logistical Rules
+---
 
-1. Groups of 2 must be registered in Canvas by April 5, 2026.
-2. Unregistered students are randomly assigned after the deadline.
-3. No group change requests accepted from April 6, 2026.
-4. Progress presentation duration must not exceed 8 minutes.
-5. Progress slides must be submitted by May 15, 2026, 11:59 PM.
-6. A 3-minute project video must be uploaded by May 29, 2026, 11:59 PM.
-7. In-person attendance is expected for presentation and demo (unless approved otherwise).
-8. Project code must be available in a GitHub repository.
+## Smart Contract Setup
 
-## Submission Checklist
+### Escrow Contract
 
-- [ ] Group formed and registered.
-- [ ] Blockchain use case justified.
-- [ ] At least 2 Solidity smart contracts implemented.
-- [ ] Multi-stakeholder interactions demonstrated.
-- [ ] Architecture diagram prepared.
-- [ ] BPMN orchestration + collaboration models completed.
-- [ ] 7-slide progress deck prepared and submitted.
-- [ ] Final demo workflow rehearsed.
-- [ ] 3-minute project video recorded and uploaded.
-- [ ] GitHub repository up to date.
+The `EscrowContract` holds all contributions for a single campaign in escrow.
+
+**Constructor parameters:**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `_fundingGoal` | `uint256` | Target amount in wei |
+| `_durationDays` | `uint256` | Campaign length in days |
+
+**Key functions:**
+
+| Function | Access | Description |
+|---|---|---|
+| `contribute()` | Payable | Send ETH to the campaign |
+| `withdraw()` | Creator only | Withdraw funds after goal is reached and deadline has passed |
+| `refund()` | Backers | Claim refund if deadline passed and goal was not reached |
+| `getBalance()` | View | Current contract balance |
+| `timeRemaining()` | View | Seconds until deadline |
+| `goalReached()` | View | Whether the funding goal has been met |
+
+After deploying, paste the contract address into `src/contracts/EscrowContract.js`:
+
+```js
+export const ESCROW_ADDRESS = "0xYourDeployedAddress";
+```
+
+### Milestone Contract
+
+The `MilestoneContract` enables creators to run sequential funding rounds, each with its own goal and deadline. It references a deployed `EscrowContract`.
+
+**Key functions:**
+
+| Function | Access | Description |
+|---|---|---|
+| `createRound(goal, durationDays)` | Creator only | Open a new funding round |
+| `contribute(roundId)` | Payable | Back a specific round |
+| `withdraw(roundId)` | Creator only | Withdraw from a completed round |
+| `refund(roundId)` | Backers | Claim refund for a failed round |
+| `getRoundInfo(roundId)` | View | Full status of a round |
+
+After deploying, paste the address into `src/contracts/MilestoneContract.js`:
+
+```js
+export const MILESTONE_ADDRESS = "0xYourDeployedAddress";
+```
+
+---
+
+## Wallet Connection
+
+Ethstarter supports two authentication methods:
+
+**MetaMask** — click *Login* in the header and select *Connect MetaMask Wallet*. The app listens for account and network changes and updates state automatically.
+
+**Manual login** — enter a wallet address and private key directly. Useful for testing with local accounts.
+
+The connected wallet address is stored in `WalletContext` and is accessible throughout the app via the `useWallet()` hook.
+
+---
+
+## Business Rules
+
+| Scenario | Behaviour |
+|---|---|
+| Deadline not passed | Backers can contribute; no withdrawals or refunds |
+| Goal reached + deadline passed | Creator can withdraw funds |
+| Deadline passed + goal not met | Backers can claim a refund |
+| Connected wallet = creator address | Edit and Withdraw buttons are shown |
+| Connected wallet ≠ creator address | Fund and Refund buttons are shown |
+
+---
+
+## Database Schema (JSON Server)
+
+Each project in `db.json` follows this shape:
+
+```json
+{
+  "id": "1748123456789",
+  "title": "My Project",
+  "owner": "Alice",
+  "creatorAddress": "0xAbc123...",
+  "goal": 5,
+  "balance": 1.5,
+  "deadline": "2025-12-31T00:00:00.000Z",
+  "description": "A short description of the project."
+}
+```
+
+---
+
+## Environment Notes
+
+- The mock API runs on `http://localhost:3001/projects`. Make sure JSON Server is running before starting the frontend.
+- Contract addresses default to placeholder values. The app will not interact with the blockchain until real deployed addresses are set in the contract files.
+- The app reloads automatically when MetaMask switches networks (`chainChanged` event).
+
+---
+
+## License
+
+MIT

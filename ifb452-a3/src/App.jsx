@@ -111,34 +111,36 @@ function App() {
 
   // ── Deploy New Escrow via Factory ─────────────────────────────────
   const handleSaveProject = async (formData) => {
-    if (!account) {
-      alert("Please connect your wallet or log in manually first.");
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const signerOrWallet  = await getSignerOrProvider();
-      const factoryContract = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signerOrWallet);
-      const goalInWei       = ethers.parseEther(formData.goal.toString());
-      const deadlineTimestamp = Number(formData.deadline);
+  if (!account) {
+    alert("Please connect your wallet or log in manually first.");
+    return;
+  }
+  setIsLoading(true);
+  try {
+    const signerOrWallet  = await getSignerOrProvider();
+    const factoryContract = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signerOrWallet);
+    const goalInWei       = ethers.parseEther(formData.goal.toString());
 
-      const tx = await factoryContract.createEscrow(
-        goalInWei,
-        deadlineTimestamp,
-        formData.title,
-        formData.owner,
-        formData.description
-      );
-      await tx.wait();
-      await fetchBlockchainProjects();
-    } catch (err) {
-      console.error("Factory execution failure:", err);
-      alert("Error: " + (err.reason ?? err.message));
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    // formData.deadline is already a Unix timestamp (seconds) from EditView — use it directly
+    const deadlineTimestamp = formData.deadline;
+
+    const tx = await factoryContract.createEscrow(
+      goalInWei,
+      deadlineTimestamp,
+      formData.title,
+      formData.owner,
+      formData.description
+    );
+    await tx.wait();
+    await fetchBlockchainProjects();
+  } catch (err) {
+    console.error("Factory execution failure:", err);
+    alert("Error: " + (err.reason ?? err.message));
+    throw err;
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // ── Contribute to Escrow ──────────────────────────────────────────
   const handleContribute = async (contractAddress, amountEth) => {

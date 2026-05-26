@@ -139,9 +139,29 @@ export function WalletProvider({ children }) {
 
   async function getSignerOrProvider() {
     if (authType === "metamask" && window.ethereum) {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      return await provider.getSigner();
+    // Force switch to Hardhat network
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: "0x7a69" }], // 31337 in hex
+      });
+    } catch (switchError) {
+      // Network not added yet, add it
+      if (switchError.code === 4902) {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: "0x7a69",
+            chainName: "Hardhat",
+            rpcUrls: ["http://127.0.0.1:8545"],
+            nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+          }],
+        });
+      }
     }
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    return await provider.getSigner();
+  }
     
     if (authType === "manual" && privateKey) {
       const provider = new ethers.JsonRpcProvider(HARDHAT_RPC_URL);

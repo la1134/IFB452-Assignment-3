@@ -66,16 +66,18 @@ src/
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/ethstarter.git
-cd ethstarter
+git clone https://github.com/la1134/IFB452-Assignment-3
 
 # 2. Install dependencies
 npm install
 
-# 3. Start the mock REST API (projects database)
-npx json-server --watch db.json --port 3001
+# 3. Run the backend
+npx hardhat node
+npx hardhat run scripts/deploy.js --network localhost
 
-# 4. Start the development server
+# 4. Run the frontend
+cd ifb452
+npm install
 npm run dev
 ```
 
@@ -95,6 +97,10 @@ The `EscrowContract` holds all contributions for a single campaign in escrow.
 |---|---|---|
 | `_fundingGoal` | `uint256` | Target amount in wei |
 | `_durationDays` | `uint256` | Campaign length in days |
+| `_title` | `string` | Title of project |
+| `_ownerName` | `string` | Project owner's name |
+| `_description` | `string` | Description of project |
+| `_creatorAddress` | `address` | Project owner's wallet address |
 
 **Key functions:**
 
@@ -106,12 +112,6 @@ The `EscrowContract` holds all contributions for a single campaign in escrow.
 | `getBalance()` | View | Current contract balance |
 | `timeRemaining()` | View | Seconds until deadline |
 | `goalReached()` | View | Whether the funding goal has been met |
-
-After deploying, paste the contract address into `src/contracts/EscrowContract.js`:
-
-```js
-export const ESCROW_ADDRESS = "0xYourDeployedAddress";
-```
 
 ### Milestone Contract
 
@@ -126,12 +126,6 @@ The `MilestoneContract` enables creators to run sequential funding rounds, each 
 | `withdraw(roundId)` | Creator only | Withdraw from a completed round |
 | `refund(roundId)` | Backers | Claim refund for a failed round |
 | `getRoundInfo(roundId)` | View | Full status of a round |
-
-After deploying, paste the address into `src/contracts/MilestoneContract.js`:
-
-```js
-export const MILESTONE_ADDRESS = "0xYourDeployedAddress";
-```
 
 ---
 
@@ -158,34 +152,3 @@ The connected wallet address is stored in `WalletContext` and is accessible thro
 | Connected wallet ≠ creator address | Fund and Refund buttons are shown |
 
 ---
-
-## Database Schema (JSON Server)
-
-Each project in `db.json` follows this shape:
-
-```json
-{
-  "id": "1748123456789",
-  "title": "My Project",
-  "owner": "Alice",
-  "creatorAddress": "0xAbc123...",
-  "goal": 5,
-  "balance": 1.5,
-  "deadline": "2025-12-31T00:00:00.000Z",
-  "description": "A short description of the project."
-}
-```
-
----
-
-## Environment Notes
-
-- The mock API runs on `http://localhost:3001/projects`. Make sure JSON Server is running before starting the frontend.
-- Contract addresses default to placeholder values. The app will not interact with the blockchain until real deployed addresses are set in the contract files.
-- The app reloads automatically when MetaMask switches networks (`chainChanged` event).
-
----
-
-## License
-
-MIT
